@@ -6,18 +6,20 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QGridLayout, QLineEdit,
 )
 from PyQt6.QtCore import Qt, QRectF, pyqtSignal
-from PyQt6.QtGui import QPainter, QColor, QPainterPath, QBrush
+from PyQt6.QtGui import QPainter, QColor, QPainterPath, QPixmap, QLinearGradient
 
 from theme import COLORS, font
 from icons import render_svg
-from widgets.components import Heading, Sub, SectionLabel
+from widgets.components import GhostButton, Heading, Sub
 from i18n import tr
 
+
 class _Thumb(QWidget):
-    """Çizgili placeholder küçük resim + format rozeti + ikon."""
-    def __init__(self, fmt, parent=None):
+    """YouTube thumbnail'ı; bulunamazsa premium placeholder gösterir."""
+    def __init__(self, fmt, thumbnail="", parent=None):
         super().__init__(parent)
         self._fmt = fmt
+        self._thumbnail = QPixmap(thumbnail) if thumbnail else QPixmap()
         self.setFixedHeight(96)
 
     def paintEvent(self, _):
@@ -33,20 +35,35 @@ class _Thumb(QWidget):
         path.quadTo(w, 0, w, 14)
         path.lineTo(w, h)
         path.closeSubpath()
-        p.fillPath(path, QColor(COLORS["thumb_bg"]))
-        # çizgili doku
         p.setClipPath(path)
-        p.setPen(QColor(COLORS["thumb_stripe"]))
-        x = -h
-        while x < w:
-            p.drawLine(int(x), h, int(x + h), 0)
-            p.drawLine(int(x + 4), h, int(x + h + 4), 0)
-            x += 18
+        if not self._thumbnail.isNull():
+            source_w = self._thumbnail.width()
+            source_h = self._thumbnail.height()
+            target_ratio = w / h if h else 1
+            source_ratio = source_w / source_h if source_h else 1
+            if source_ratio > target_ratio:
+                crop_w = source_h * target_ratio
+                source = QRectF((source_w - crop_w) / 2, 0, crop_w, source_h)
+            else:
+                crop_h = source_w / target_ratio
+                source = QRectF(0, (source_h - crop_h) / 2, source_w, crop_h)
+            p.drawPixmap(QRectF(0, 0, w, h), self._thumbnail, source)
+            shade = QLinearGradient(0, 0, 0, h)
+            shade.setColorAt(0.0, QColor(0, 0, 0, 12))
+            shade.setColorAt(1.0, QColor(0, 0, 0, 80))
+            p.fillRect(QRectF(0, 0, w, h), shade)
+        else:
+            p.fillPath(path, QColor(COLORS["thumb_bg"]))
+            p.setPen(QColor(COLORS["thumb_stripe"]))
+            x = -h
+            while x < w:
+                p.drawLine(int(x), h, int(x + h), 0)
+                p.drawLine(int(x + 4), h, int(x + h + 4), 0)
+                x += 18
+            name = "music" if self._fmt == "MP3" else "video"
+            pm = render_svg(name, 28, COLORS["thumb_icon"])
+            p.drawPixmap(int((w - 28) / 2), int((h - 28) / 2), pm)
         p.setClipping(False)
-        # ortadaki ikon
-        name = "music" if self._fmt == "MP3" else "video"
-        pm = render_svg(name, 28, COLORS["thumb_icon"])
-        p.drawPixmap(int((w - 28) / 2), int((h - 28) / 2), pm)
         # format rozeti
         badge_w = 38
         bcol = QColor("#ff2233") if self._fmt == "MP3" else QColor("#2d7bff")
@@ -63,7 +80,9 @@ class _Thumb(QWidget):
 class _LibCard(QFrame):
     clicked = pyqtSignal(str)
 
-    def __init__(self, title, fmt, size, quality, path="", parent=None):
+    def __init__(
+        self, title, fmt, size, quality, path="", thumbnail="", parent=None,
+    ):
         super().__init__(parent)
         self.path = path
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -73,7 +92,7 @@ class _LibCard(QFrame):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
 
-        lay.addWidget(_Thumb(fmt))
+        lay.addWidget(_Thumb(fmt, thumbnail))
 
         body = QWidget()
         body.setStyleSheet("background: transparent;")
@@ -118,6 +137,7 @@ class _LibCard(QFrame):
 
 class LibraryPage(QWidget):
     file_open_requested = pyqtSignal(str)
+    folder_open_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -135,6 +155,22 @@ class LibraryPage(QWidget):
         col.addWidget(Sub(tr("library.subtitle")))
         head.addLayout(col)
         head.addStretch(1)
+        self.open_folder_btn = GhostButton(
+            tr("library.open_folder"),
+            "folder",
+            height=42,
+            bg=COLORS["input"],
+            icon_size=16,
+            font_size=12.5,
+            pad=14,
+        )
+        self.open_folder_btn.setToolTip(tr("library.open_folder_tip"))
+        self.open_folder_btn.clicked.connect(self.folder_open_requested.emit)
+        head.addWidget(
+            self.open_folder_btn,
+            alignment=Qt.AlignmentFlag.AlignBottom,
+        )
+        head.addSpacing(10)
         head.addWidget(self._search(), alignment=Qt.AlignmentFlag.AlignBottom)
         root.addLayout(head)
         root.addSpacing(24)
@@ -211,6 +247,7 @@ class LibraryPage(QWidget):
                 item["size"],
                 item["quality"],
                 item.get("path", ""),
+                item.get("thumbnail", ""),
             )
             card.clicked.connect(self.file_open_requested)
             self.grid.addWidget(card, index // 3, index % 3)

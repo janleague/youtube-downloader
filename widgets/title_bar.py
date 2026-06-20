@@ -84,7 +84,7 @@ class TitleBar(QWidget):
         title.setFont(font(14, "bold", "display", spacing=-0.2))
         title.setStyleSheet(f"color: {COLORS['text']}; background: transparent;")
         left.addWidget(title)
-        ver = QLabel("v2.0")
+        ver = QLabel("v2.1")
         ver.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         ver.setFont(font(11, "medium", "ui"))
         ver.setStyleSheet(f"color: {COLORS['dim']}; background: transparent;")

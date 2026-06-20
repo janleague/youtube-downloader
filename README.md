@@ -22,7 +22,9 @@
 - Download history with search and direct file opening
 - Turkish and English interface
 - Persistent folder, format, quality and notification preferences
-- Automatic `Downloads\YouTube Downloader` folder creation
+- AppData-based settings and automatic download storage
+- YouTube thumbnails and persistent metadata in the Library
+- One-click **Open folder** action in the Library
 - Frameless custom window, subtle glow effects and bundled Sora/Manrope fonts
 - Windows installer, Start Menu shortcut and optional FFmpeg setup
 
@@ -31,7 +33,7 @@
 | Dark theme | Light theme |
 | --- | --- |
 | ![Dark settings](docs/images/dark-settings.png) | ![Light download screen](docs/images/light-download.png) |
-| ![Dark about page](docs/images/dark-about.png) | ![Light about page](docs/images/light-about.png) |
+| ![Library thumbnails](docs/images/dark-library.png) | ![Light about page](docs/images/light-about.png) |
 
 The About page loads the developer's current GitHub profile avatar directly
 from GitHub and uses the packaged real avatar as an offline fallback.
@@ -40,7 +42,7 @@ from GitHub and uses the packaged real avatar as an offline fallback.
 
 ### Recommended
 
-Download `YouTubeDownloader-Setup-v2.0.0.exe` from the
+Download `YouTubeDownloader-Setup-v2.1.0.exe` from the
 [latest release](https://github.com/janleague/youtube-downloader/releases/latest).
 The installer adds Start Menu and optional desktop shortcuts. FFmpeg can also
 be installed through the optional installer task.
@@ -87,7 +89,7 @@ Outputs:
 
 ```text
 dist\YouTubeDownloader.exe
-dist\YouTubeDownloader-Setup-v2.0.0.exe
+dist\YouTubeDownloader-Setup-v2.1.0.exe
 ```
 
 GitHub Actions also performs a clean Windows build for every push and attaches
@@ -108,6 +110,11 @@ scripts/    Asset and screenshot generation helpers
 
 - Supported links include regular videos, Shorts and `youtu.be` URLs.
 - Playlist links are handled in single-video mode.
+- Settings are stored at
+  `%LOCALAPPDATA%\janleague\YouTubeDownloader\settings.ini`.
+- Downloads default to
+  `%LOCALAPPDATA%\janleague\YouTubeDownloader\Downloads` and can be changed
+  from Settings at any time.
 - Only download media you are authorized to access. You are responsible for
   complying with applicable copyright rules and platform terms.
 - This project is not affiliated with or endorsed by YouTube or Google.

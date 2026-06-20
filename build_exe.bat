@@ -38,8 +38,8 @@ if exist "%ISCC%" (
 
 echo.
 echo [+] Hazir: dist\YouTubeDownloader.exe
-if exist "dist\YouTubeDownloader-Setup-v2.0.0.exe" (
-    echo [+] Hazir: dist\YouTubeDownloader-Setup-v2.0.0.exe
+if exist "dist\YouTubeDownloader-Setup-v2.1.0.exe" (
+    echo [+] Hazir: dist\YouTubeDownloader-Setup-v2.1.0.exe
 )
 exit /b 0
 

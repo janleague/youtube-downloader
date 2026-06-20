@@ -152,6 +152,9 @@ class MainWindow(QWidget):
         self.controller.error.connect(self._download_error)
 
         self.page_library.file_open_requested.connect(self._open_path)
+        self.page_library.folder_open_requested.connect(
+            lambda: self._open_path(str(self.downloads_dir))
+        )
 
         self.page_settings.folder_change_requested.connect(self._choose_folder)
         self.page_settings.default_format_changed.connect(self._set_default_format)

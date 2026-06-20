@@ -175,6 +175,8 @@ class DownloadManager:
         return {
             "outtmpl": str(self.downloads_dir / "%(title)s.%(ext)s"),
             "progress_hooks": [self._progress_hook],
+            "writeinfojson": True,
+            "writethumbnail": True,
             "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
@@ -190,11 +192,10 @@ class DownloadManager:
             if self.on_status:
                 self.on_status("Video bilgileri alınıyor...", "info")
             with yt_dlp.YoutubeDL(options) as ydl:
-                info = ydl.extract_info(url, download=False)
+                info = ydl.extract_info(url, download=True)
                 if not info:
                     raise RuntimeError("Video bilgisi alınamadı.")
                 title = info.get("title") or "video"
-                ydl.download([url])
 
             matches = sorted(
                 self.downloads_dir.glob(f"*.{output_ext}"),

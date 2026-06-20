@@ -30,6 +30,28 @@ def capture(app: QApplication, filename: str, page: str, dark: bool) -> None:
     app.setStyleSheet(app_qss())
     window = MainWindow()
     window.sidebar.select(page)
+    if page == "library":
+        thumbnail = str(ROOT / "app_icon.png")
+        window.page_library.populate(
+            [
+                {
+                    "title": "Premium UI Design Process",
+                    "format": "MP4",
+                    "size": "84.2 MB",
+                    "quality": "1080p",
+                    "path": "",
+                    "thumbnail": thumbnail,
+                },
+                {
+                    "title": "Focus Music Mix",
+                    "format": "MP3",
+                    "size": "12.8 MB",
+                    "quality": "320 kbps",
+                    "path": "",
+                    "thumbnail": thumbnail,
+                },
+            ]
+        )
     window.show()
     app.processEvents()
     app.processEvents()
@@ -53,6 +75,7 @@ def main() -> None:
     original_theme = settings.value("dark_theme", True)
     try:
         capture(app, "dark-download.png", "download", True)
+        capture(app, "dark-library.png", "library", True)
         capture(app, "dark-settings.png", "settings", True)
         capture(app, "dark-about.png", "about", True)
         capture(app, "light-download.png", "download", False)

@@ -1,4 +1,4 @@
-"""İndirme klasöründeki medya dosyalarını kütüphane modeline çevirir."""
+"""İndirme klasöründeki medya ve yt-dlp metadata dosyalarını tarar."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 MEDIA_EXTENSIONS = {".mp3", ".m4a", ".mp4", ".mkv", ".webm"}
+THUMBNAIL_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".avif"}
 
 
 def scan_library(folder: Path) -> list[dict]:
@@ -25,13 +26,64 @@ def scan_library(folder: Path) -> list[dict]:
 
 def _describe(path: Path) -> dict:
     fmt = "MP3" if path.suffix.lower() in {".mp3", ".m4a"} else "MP4"
+    metadata = _load_metadata(path)
     return {
-        "title": path.stem,
+        "title": str(metadata.get("title") or path.stem),
         "format": fmt,
         "size": _format_size(path.stat().st_size),
-        "quality": _probe_quality(path, fmt),
+        "quality": _metadata_quality(metadata, fmt) or _probe_quality(path, fmt),
         "path": str(path),
+        "thumbnail": str(_find_thumbnail(path) or ""),
+        "source_url": str(
+            metadata.get("webpage_url")
+            or metadata.get("original_url")
+            or ""
+        ),
     }
+
+
+def _load_metadata(path: Path) -> dict:
+    info_path = path.with_name(f"{path.stem}.info.json")
+    if not info_path.exists():
+        return {}
+    try:
+        with info_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        return data if isinstance(data, dict) else {}
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return {}
+
+
+def _find_thumbnail(path: Path) -> Path | None:
+    for candidate in path.parent.iterdir():
+        if (
+            candidate.is_file()
+            and candidate.stem == path.stem
+            and candidate.suffix.lower() in THUMBNAIL_EXTENSIONS
+        ):
+            return candidate
+    return None
+
+
+def _metadata_quality(metadata: dict, fmt: str) -> str:
+    if fmt == "MP3":
+        abr = metadata.get("abr") or metadata.get("tbr")
+        try:
+            return f"{round(float(abr))} kbps" if abr else ""
+        except (TypeError, ValueError):
+            return ""
+    height = metadata.get("height")
+    if not height:
+        formats = metadata.get("requested_formats") or []
+        height = max(
+            (
+                item.get("height") or 0
+                for item in formats
+                if isinstance(item, dict)
+            ),
+            default=0,
+        )
+    return f"{height}p" if height else ""
 
 
 def _format_size(size: int) -> str:

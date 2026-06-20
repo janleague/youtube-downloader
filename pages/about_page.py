@@ -40,7 +40,7 @@ class _Avatar(QLabel):
         )
         self._network = QNetworkAccessManager(self)
         request = QNetworkRequest(QUrl(GITHUB_AVATAR_URL))
-        request.setRawHeader(b"User-Agent", b"YouTubeDownloader/2.0")
+        request.setRawHeader(b"User-Agent", b"YouTubeDownloader/2.1")
         self._network.get(request).finished.connect(self._avatar_loaded)
 
     def _avatar_loaded(self):
