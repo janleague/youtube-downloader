@@ -1,191 +1,122 @@
 <div align="center">
+  <img src="app_icon.png" width="112" alt="YouTube Downloader icon">
+  <h1>YouTube Downloader</h1>
+  <p>Premium, native Windows downloader for YouTube video and audio.</p>
 
-# ▶ YouTube Downloader
+  [![Release](https://img.shields.io/github/v/release/janleague/youtube-downloader?style=flat-square&color=ff1635)](https://github.com/janleague/youtube-downloader/releases/latest)
+  [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-1674ea?style=flat-square)](https://github.com/janleague/youtube-downloader/releases/latest)
+  [![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab?style=flat-square)](https://www.python.org/)
+  [![License](https://img.shields.io/github/license/janleague/youtube-downloader?style=flat-square)](LICENSE)
 
-**Modern, karanlık temalı YouTube MP3 & MP4 indirici**
-
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![yt-dlp](https://img.shields.io/badge/yt--dlp-latest-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://github.com/yt-dlp/yt-dlp)
-[![CustomTkinter](https://img.shields.io/badge/CustomTkinter-5.x-1F6FEB?style=for-the-badge)](https://github.com/TomSchimansky/CustomTkinter)
-[![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
-[![Author](https://img.shields.io/badge/by-janleague-6E40C9?style=for-the-badge&logo=github)](https://github.com/janleague)
-
+  **[Download the Windows installer](https://github.com/janleague/youtube-downloader/releases/latest)**
 </div>
 
----
+![YouTube Downloader dark interface](docs/images/dark-download.png)
 
-## ✨ Özellikler
+## Highlights
 
-- **MP3 & MP4** — tek uygulamadan iki format
-- **MP3**: En yüksek kalite ses, otomatik **320 kbps** dönüşümü + ID3 metadata
-- **MP4**: 144p'den 2160p (4K)'ya seçilebilir çözünürlük
-- **Gerçek zamanlı progress bar** — yüzde, hız (MB/s) ve kalan süre
-- **Kapsamlı hata yönetimi** — 20+ hata türü kullanıcı dostu mesajlara çevrilir
-- **ffmpeg kontrolü** — MP3 dönüşümünden önce otomatik kontrol
-- **İndirmeler klasörü** — script ile aynı dizinde `Downloads/` altında toplanır
-- **GitHub butonu** — footer'dan direkt profile git
-- **Tek dosya** — kurulum dışında ek bir şey yok
+- MP3 conversion at 128, 192, 256 or 320 kbps
+- MP4 downloads from 360p up to 2160p
+- Live progress, speed, remaining time and clear status feedback
+- Native dark and light themes
+- Download history with search and direct file opening
+- Turkish and English interface
+- Persistent folder, format, quality and notification preferences
+- Automatic `Downloads\YouTube Downloader` folder creation
+- Frameless custom window, subtle glow effects and bundled Sora/Manrope fonts
+- Windows installer, Start Menu shortcut and optional FFmpeg setup
 
----
+## Interface
 
-## 🖥️ Ekran Görüntüsü
+| Dark theme | Light theme |
+| --- | --- |
+| ![Dark settings](docs/images/dark-settings.png) | ![Light download screen](docs/images/light-download.png) |
+| ![Dark about page](docs/images/dark-about.png) | ![Light about page](docs/images/light-about.png) |
 
-```
-╔══════════════════════════════════════════════════╗
-║  ▶  YouTube Downloader          by janleague  ║
-║     MP3 & MP4  ·  Yüksek Kalite  ·  Ücretsiz  v1.0  ║
-╠══════════════════════════════════════════════════╣
-║  YOUTUBE URL                                     ║
-║  ┌──────────────────────────────────────────┐    ║
-║  │  https://www.youtube.com/watch?v=...     │    ║
-║  └──────────────────────────────────────────┘    ║
-║                                      [✕ Temizle] ║
-║  FORMAT                                          ║
-║  ┌──────────────────────────────────────────┐    ║
-║  │  ● MP3        ○ MP4                      │    ║
-║  └──────────────────────────────────────────┘    ║
-║  🎵  En yüksek kalite ses  ·  320 kbps MP3       ║
-║                                                  ║
-║  ┌────────────────[⬇  İndir]─────────────────┐   ║
-║  └──────────────────────────────────────────┘    ║
-║  %73.4            1.8 MB/s           12s kaldı  ║
-║  ████████████████████░░░░░░░░░░░░░░░░░░░░░░░    ║
-║  🔄  Video bilgileri alınıyor...                ║
-╠══════════════════════════════════════════════════╣
-║  📁 ./Downloads        [Klasörü Aç] [github] ║
-╚══════════════════════════════════════════════════╝
-```
+The About page loads the developer's current GitHub profile avatar directly
+from GitHub and uses the packaged real avatar as an offline fallback.
 
----
+## Install
 
-## 📦 Kurulum
+### Recommended
 
-### 1. Depoyu klonla
+Download `YouTubeDownloader-Setup-v2.0.0.exe` from the
+[latest release](https://github.com/janleague/youtube-downloader/releases/latest).
+The installer adds Start Menu and optional desktop shortcuts. FFmpeg can also
+be installed through the optional installer task.
 
-```bash
+### Portable
+
+Download `YouTubeDownloader.exe` from the same release and run it directly.
+
+Windows SmartScreen may show a warning because the binaries are not
+code-signed. You can inspect the source and verify downloads with the published
+`SHA256SUMS.txt` file.
+
+## Run from source
+
+Requirements:
+
+- Windows 10 or Windows 11
+- Python 3.10+
+- FFmpeg for MP3 conversion and high-quality MP4 merging
+
+```powershell
 git clone https://github.com/janleague/youtube-downloader.git
 cd youtube-downloader
+python -m pip install -r requirements.txt
+python main.py
 ```
 
-### 2. Python bağımlılıklarını kur
+Install FFmpeg when needed:
 
-```bash
-pip install customtkinter yt-dlp
+```powershell
+winget install --id Gyan.FFmpeg --exact
 ```
 
-> **Not:** Python 3.10 veya üzeri gereklidir.
+## Build
 
-### 3. ffmpeg'i kur (zorunlu)
+`build_exe.bat` creates both the portable executable and the Inno Setup
+installer:
 
-MP3 dönüşümü ve yüksek kaliteli MP4 birleştirme için ffmpeg şarttır.
-
-| Platform | Komut |
-|----------|-------|
-| **Windows** | `winget install ffmpeg` |
-| **macOS** | `brew install ffmpeg` |
-| **Ubuntu/Debian** | `sudo apt install ffmpeg` |
-| **Fedora** | `sudo dnf install ffmpeg` |
-| **Manuel** | [gyan.dev/ffmpeg/builds](https://www.gyan.dev/ffmpeg/builds/) → PATH'e ekle |
-
-Kurulumu doğrula:
-```bash
-ffmpeg -version
+```powershell
+.\build_exe.bat
 ```
 
----
+Outputs:
 
-## 🚀 Kullanım
-
-```bash
-python youtube_downloader.py
+```text
+dist\YouTubeDownloader.exe
+dist\YouTubeDownloader-Setup-v2.0.0.exe
 ```
 
-1. YouTube video URL'sini giriş kutusuna yapıştır
-2. **MP3** veya **MP4** seç
-3. MP4 seçildiyse çözünürlük belirle (720p, 1080p, vb.)
-4. **⬇ İndir** butonuna bas veya `Enter`'a bas
-5. İndirilen dosya `Downloads/` klasörüne kaydedilir
+GitHub Actions also performs a clean Windows build for every push and attaches
+the binaries to tagged releases.
 
----
+## Project structure
 
-## 📁 Proje Yapısı
-
-```
-youtube-downloader/
-│
-├── youtube_downloader.py   # Ana uygulama (tek dosya)
-├── Downloads/              # İndirilen dosyalar burada toplanır
-│   ├── video_adi.mp3
-│   └── video_adi.mp4
-├── README.md
-└── LICENSE
+```text
+core/       yt-dlp integration, download controller, settings and library
+pages/      Download, Library, Settings and About screens
+widgets/    Shared PyQt6 components, sidebar and custom title bar
+assets/     Packaged developer avatar
+fonts/      Bundled Sora and Manrope fonts
+scripts/    Asset and screenshot generation helpers
 ```
 
----
+## Notes
 
-## ⚙️ Teknik Detaylar
+- Supported links include regular videos, Shorts and `youtu.be` URLs.
+- Playlist links are handled in single-video mode.
+- Only download media you are authorized to access. You are responsible for
+  complying with applicable copyright rules and platform terms.
+- This project is not affiliated with or endorsed by YouTube or Google.
 
-### Mimari
+## Developer
 
-Uygulama iki katmana ayrılmıştır:
-
-**`DownloadManager` (Logic Katmanı)**
-- GUI'den tamamen bağımsız
-- `yt-dlp` ile indirme ve dönüştürme
-- 20+ hata senaryosu için kullanıcı dostu mesajlar
-- `callback` sistemi ile GUI'ye ilerleme bilgisi gönderir
-
-**`App` (GUI Katmanı)**
-- `CustomTkinter` tabanlı, karanlık tema
-- Thread-safe `after()` callback sistemi
-- Tüm ağ işlemleri ayrı `daemon thread`'de — GUI her zaman duyarlı
-
-### Desteklenen URL Formatları
-
-| Format | Örnek |
-|--------|-------|
-| Standart | `https://www.youtube.com/watch?v=VIDEO_ID` |
-| Kısa | `https://youtu.be/VIDEO_ID` |
-| Shorts | `https://www.youtube.com/shorts/VIDEO_ID` |
-
-### Hata Yönetimi
-
-| Hata Türü | Açıklama |
-|-----------|----------|
-| Private Video | Özel video uyarısı |
-| Geo-kısıtlı | Bölge yasağı uyarısı |
-| Üye videosu | Üyelik gerekliliği uyarısı |
-| ffmpeg yok | Kurulum talimatıyla birlikte uyarı |
-| İnternet yok | Ağ bağlantı hatası |
-| HTTP 403/404/429/500 | Sunucu hata kodları |
-| Disk alanı yok | Yetersiz alan uyarısı |
-| İzin hatası | Klasör yazma izni uyarısı |
-| Telif hakkı | Copyright kısıtlaması uyarısı |
-| DRM korumalı | Koruma uyarısı |
-
----
-
-## 🔧 Gereksinimler
-
-| Bağımlılık | Versiyon | Açıklama |
-|------------|----------|----------|
-| Python | ≥ 3.10 | `str \| None` söz dizimi |
-| customtkinter | ≥ 5.0 | Modern GUI framework |
-| yt-dlp | latest | YouTube indirme motoru |
-| ffmpeg | herhangi | Ses/video dönüştürme |
-
----
-
-## 📝 Lisans
-
-Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
-
----
-
-<div align="center">
-
-**Geliştirici: [janleague](https://github.com/janleague)**
-
-*Beğendiysen ⭐ vermeyi unutma!*
-
-</div>
+<p>
+  <img src="assets/janleague-avatar-round.png" width="64" align="left" alt="janleague GitHub avatar">
+  <strong><a href="https://github.com/janleague">janleague</a></strong><br>
+  Built with PyQt6, yt-dlp and FFmpeg.<br>
+  Released under the <a href="LICENSE">MIT License</a>.
+</p>
