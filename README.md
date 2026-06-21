@@ -1,129 +1,68 @@
-<div align="center">
-  <img src="app_icon.png" width="112" alt="YouTube Downloader icon">
-  <h1>YouTube Downloader</h1>
-  <p>Premium, native Windows downloader for YouTube video and audio.</p>
+# YouTube İndirici
 
-  [![Release](https://img.shields.io/github/v/release/janleague/youtube-downloader?style=flat-square&color=ff1635)](https://github.com/janleague/youtube-downloader/releases/latest)
-  [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-1674ea?style=flat-square)](https://github.com/janleague/youtube-downloader/releases/latest)
-  [![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab?style=flat-square)](https://www.python.org/)
-  [![License](https://img.shields.io/github/license/janleague/youtube-downloader?style=flat-square)](LICENSE)
+Tauri + React arayüzlü, `yt-dlp` tabanlı Windows video ve ses indirici.
 
-  **[Download the Windows installer](https://github.com/janleague/youtube-downloader/releases/latest)**
-</div>
+## Özellikler
 
-![YouTube Downloader dark interface](docs/images/dark-download.png)
+- MP3: 128, 192, 256 ve 320 kbps
+- MP4: 360p ile 2160p arası kalite seçimi
+- Canlı ilerleme, hız ve kalan süre
+- Gerçek indirme kütüphanesi, küçük resimler ve dosya açma
+- Kalıcı klasör, format, kalite, dil, bildirim ve tema ayarları
+- Türkçe ve İngilizce arayüz
+- Tauri masaüstü bildirimleri
 
-## Highlights
+## Kaynaktan çalıştırma
 
-- MP3 conversion at 128, 192, 256 or 320 kbps
-- MP4 downloads from 360p up to 2160p
-- Live progress, speed, remaining time and clear status feedback
-- Native dark and light themes
-- Download history with search and direct file opening
-- Turkish and English interface
-- Persistent folder, format, quality and notification preferences
-- AppData-based settings and automatic download storage
-- YouTube thumbnails and persistent metadata in the Library
-- One-click **Open folder** action in the Library
-- Frameless custom window, subtle glow effects and bundled Sora/Manrope fonts
-- Windows installer, Start Menu shortcut and optional FFmpeg setup
+Gerekenler:
 
-## Interface
-
-| Dark theme | Light theme |
-| --- | --- |
-| ![Dark settings](docs/images/dark-settings.png) | ![Light download screen](docs/images/light-download.png) |
-| ![Library thumbnails](docs/images/dark-library.png) | ![Light about page](docs/images/light-about.png) |
-
-The About page loads the developer's current GitHub profile avatar directly
-from GitHub and uses the packaged real avatar as an offline fallback.
-
-## Install
-
-### Recommended
-
-Download `YouTubeDownloader-Setup-v2.1.0.exe` from the
-[latest release](https://github.com/janleague/youtube-downloader/releases/latest).
-The installer adds Start Menu and optional desktop shortcuts. FFmpeg can also
-be installed through the optional installer task.
-
-### Portable
-
-Download `YouTubeDownloader.exe` from the same release and run it directly.
-
-Windows SmartScreen may show a warning because the binaries are not
-code-signed. You can inspect the source and verify downloads with the published
-`SHA256SUMS.txt` file.
-
-## Run from source
-
-Requirements:
-
-- Windows 10 or Windows 11
+- Windows 10/11
 - Python 3.10+
-- FFmpeg for MP3 conversion and high-quality MP4 merging
+- Node.js
+- Rust
+- MP3 ve yüksek kaliteli MP4 birleştirme için FFmpeg
 
 ```powershell
-git clone https://github.com/janleague/youtube-downloader.git
-cd youtube-downloader
 python -m pip install -r requirements.txt
-python main.py
+cd .\NEWGUI\react-src
+npm install
+npm run tauri dev
 ```
 
-Install FFmpeg when needed:
+FFmpeg gerekirse:
 
 ```powershell
 winget install --id Gyan.FFmpeg --exact
 ```
 
-## Build
-
-`build_exe.bat` creates both the portable executable and the Inno Setup
-installer:
+## Test ve derleme
 
 ```powershell
-.\build_exe.bat
+python -m unittest discover -s tests -v
+cd .\NEWGUI\react-src
+npm run build
+cargo check --manifest-path .\src-tauri\Cargo.toml
 ```
 
-Outputs:
+Windows installer oluşturmak için:
+
+```powershell
+cd .\NEWGUI\react-src
+npm run release:build
+```
+
+## Yapı
 
 ```text
-dist\YouTubeDownloader.exe
-dist\YouTubeDownloader-Setup-v2.1.0.exe
+backend.py                 Tauri ile Python arasındaki JSON köprüsü
+core/                      yt-dlp, ayarlar ve kütüphane mantığı
+NEWGUI/react-src/src/      React arayüzü
+NEWGUI/react-src/src-tauri Tauri/Rust masaüstü katmanı
+tests/                     Python çekirdek testleri
 ```
 
-GitHub Actions also performs a clean Windows build for every push and attaches
-the binaries to tagged releases.
+Ayarlar `%LOCALAPPDATA%\janleague\YouTubeDownloader\settings.ini` altında,
+varsayılan indirmeler aynı dizindeki `Downloads` klasöründe tutulur.
 
-## Project structure
-
-```text
-core/       yt-dlp integration, download controller, settings and library
-pages/      Download, Library, Settings and About screens
-widgets/    Shared PyQt6 components, sidebar and custom title bar
-assets/     Packaged developer avatar
-fonts/      Bundled Sora and Manrope fonts
-scripts/    Asset and screenshot generation helpers
-```
-
-## Notes
-
-- Supported links include regular videos, Shorts and `youtu.be` URLs.
-- Playlist links are handled in single-video mode.
-- Settings are stored at
-  `%LOCALAPPDATA%\janleague\YouTubeDownloader\settings.ini`.
-- Downloads default to
-  `%LOCALAPPDATA%\janleague\YouTubeDownloader\Downloads` and can be changed
-  from Settings at any time.
-- Only download media you are authorized to access. You are responsible for
-  complying with applicable copyright rules and platform terms.
-- This project is not affiliated with or endorsed by YouTube or Google.
-
-## Developer
-
-<p>
-  <img src="assets/janleague-avatar-round.png" width="64" align="left" alt="janleague GitHub avatar">
-  <strong><a href="https://github.com/janleague">janleague</a></strong><br>
-  Built with PyQt6, yt-dlp and FFmpeg.<br>
-  Released under the <a href="LICENSE">MIT License</a>.
-</p>
+Yalnızca indirme yetkinizin bulunduğu içerikleri indirin. Bu proje YouTube veya
+Google ile bağlantılı değildir.

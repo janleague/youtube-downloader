@@ -32,6 +32,7 @@ def _describe(path: Path) -> dict:
         "format": fmt,
         "size": _format_size(path.stat().st_size),
         "quality": _metadata_quality(metadata, fmt) or _probe_quality(path, fmt),
+        "duration": _format_duration(metadata.get("duration")),
         "path": str(path),
         "thumbnail": str(_find_thumbnail(path) or ""),
         "source_url": str(
@@ -40,6 +41,18 @@ def _describe(path: Path) -> dict:
             or ""
         ),
     }
+
+
+def _format_duration(value) -> str:
+    try:
+        seconds = max(0, round(float(value)))
+    except (TypeError, ValueError):
+        return ""
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes}:{seconds:02d}"
 
 
 def _load_metadata(path: Path) -> dict:

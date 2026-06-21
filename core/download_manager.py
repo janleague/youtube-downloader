@@ -179,6 +179,7 @@ class DownloadManager:
             "writethumbnail": True,
             "noplaylist": True,
             "quiet": True,
+            "noprogress": True,
             "no_warnings": True,
             "ignoreerrors": False,
             "socket_timeout": 30,

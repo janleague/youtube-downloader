@@ -8,6 +8,14 @@ build/
 dist/
 Downloads/
 *.spec.bak
+node_modules/
+NEWGUI/react-src/dist/
+NEWGUI/react-src/src-tauri/target/
+NEWGUI/react-src/src-tauri/binaries/*.exe
+.backend-build/
+.backend-spec/
+.release-backend-build/
+.release-backend-spec/
 
 .idea/
 .vscode/

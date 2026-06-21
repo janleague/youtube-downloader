@@ -1,0 +1,90 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  background: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Manrope", system-ui, sans-serif;
+  background: transparent;
+  color: #f4f4f6;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+input {
+  user-select: text;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.drag {
+  -webkit-app-region: drag;
+}
+
+.no-drag,
+button,
+input {
+  -webkit-app-region: no-drag;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+input::placeholder {
+  color: #5c5c64;
+}
+
+/* Tasarımın renk ilişkilerini koruyan gerçek zamanlı açık tema. */
+.light {
+  color-scheme: light;
+}
+
+.light .app-shell {
+  filter: invert(0.9) hue-rotate(180deg);
+}
+
+.light .app-shell img {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 210px;
+  }
+}

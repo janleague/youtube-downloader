@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @keyframes pageIn { from { transform: translateY(9px); } to { transform: none; } }
+  @keyframes riseIn { from { opacity:0; transform: translateY(6px) scale(.99); } to { opacity:1; transform:none; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.10); border-radius:8px; border:3px solid transparent; background-clip:padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.18); background-clip:padding-box; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  input::placeholder { color:#5c5c64; }
+</style>
+</helmet>
+<div style="min-height:100vh; width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; padding:34px; background:radial-gradient(1100px 640px at 26% -12%, #1c1016 0%, rgba(10,8,10,0) 56%), radial-gradient(900px 560px at 102% -4%, #11131c 0%, rgba(8,9,12,0) 52%), #050507; font-family:'Manrope', system-ui, sans-serif;">
+
+  <div style="width:1180px; height:752px; display:flex; flex-direction:column; border-radius:18px; overflow:hidden; background:#0a0a0d; border:1px solid rgba(255,255,255,.08); box-shadow:0 40px 120px -24px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04);">
+
+    <!-- ───────── TITLEBAR ───────── -->
+    <div style="height:48px; flex:none; display:flex; align-items:center; gap:13px; padding:0 12px 0 16px; background:rgba(12,12,16,.72); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); border-bottom:1px solid rgba(255,255,255,.05);">
+      <div style="width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:linear-gradient(150deg,#ff3a47,#e0001a); box-shadow:0 4px 14px -3px rgba(255,40,60,.6), inset 0 1px 0 rgba(255,255,255,.25); transition:box-shadow .25s, transform .25s;" style-hover="box-shadow:0 6px 22px -2px rgba(255,40,60,.9), inset 0 1px 0 rgba(255,255,255,.3); transform:scale(1.06);">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><path d="M7 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 7 5.5Z"/></svg>
+      </div>
+      <span style="font-family:'Sora'; font-weight:700; font-size:13.5px; color:#f4f4f6; letter-spacing:-.2px;">YouTube İndirici</span>
+      <span style="font-size:10.5px; font-weight:600; color:#6a6a72; padding:2px 7px; border-radius:6px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06);">v2.0</span>
+      <div style="flex:1;"></div>
+      <button onClick="{{ winMin }}" style="width:32px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:#8a8a93; cursor:pointer; transition:background .18s, color .18s;" style-hover="background:rgba(255,255,255,.06); color:#e4e4e8;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button onClick="{{ winMax }}" style="width:32px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:#8a8a93; cursor:pointer; transition:background .18s, color .18s;" style-hover="background:rgba(255,255,255,.06); color:#e4e4e8;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2.4"/></svg>
+      </button>
+      <button onClick="{{ winClose }}" style="width:32px; height:30px; display:flex; align-items:center; justify-content:center; border:none; border-radius:8px; background:transparent; color:#8a8a93; cursor:pointer; transition:background .18s, color .18s;" style-hover="background:#e0001a; color:#fff;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div style="flex:1; min-height:0; display:flex;">
+
+      <!-- ───────── SIDEBAR ───────── -->
+      <div style="width:244px; flex:none; display:flex; flex-direction:column; padding:18px 14px 16px; background:rgba(9,9,12,.5); border-right:1px solid rgba(255,255,255,.05);">
+        <div style="font-size:10.5px; font-weight:700; letter-spacing:1.6px; color:#4d4d55; padding:0 8px; margin-bottom:14px;">MENÜ</div>
+
+        <button onClick="{{ goDownload }}" style="position:relative; display:flex; align-items:center; gap:13px; height:44px; padding:0 13px; margin-bottom:4px; border:none; border-radius:11px; cursor:pointer; font-family:'Manrope'; font-size:14px; font-weight:600; text-align:left; transition:background .2s cubic-bezier(.4,0,.2,1), color .2s, box-shadow .2s; background:{{ nav.download.bg }}; color:{{ nav.download.color }}; box-shadow:{{ nav.download.glow }};" style-hover="background:rgba(255,255,255,.045);">
+          <sc-if value="{{ nav.download.active }}"><span style="position:absolute; left:-14px; top:12px; bottom:12px; width:3px; border-radius:0 4px 4px 0; background:linear-gradient(#ff5a68,#ff2740); box-shadow:0 0 12px rgba(255,40,60,.8);"></span></sc-if>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>
+          İndir
+        </button>
+
+        <button onClick="{{ goLibrary }}" style="position:relative; display:flex; align-items:center; gap:13px; height:44px; padding:0 13px; margin-bottom:4px; border:none; border-radius:11px; cursor:pointer; font-family:'Manrope'; font-size:14px; font-weight:600; text-align:left; transition:background .2s cubic-bezier(.4,0,.2,1), color .2s, box-shadow .2s; background:{{ nav.library.bg }}; color:{{ nav.library.color }}; box-shadow:{{ nav.library.glow }};" style-hover="background:rgba(255,255,255,.045);">
+          <sc-if value="{{ nav.library.active }}"><span style="position:absolute; left:-14px; top:12px; bottom:12px; width:3px; border-radius:0 4px 4px 0; background:linear-gradient(#ff5a68,#ff2740); box-shadow:0 0 12px rgba(255,40,60,.8);"></span></sc-if>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7.2" height="7.2" rx="1.6"/><rect x="13.8" y="3" width="7.2" height="7.2" rx="1.6"/><rect x="3" y="13.8" width="7.2" height="7.2" rx="1.6"/><rect x="13.8" y="13.8" width="7.2" height="7.2" rx="1.6"/></svg>
+          Kütüphane
+        </button>
+
+        <button onClick="{{ goSettings }}" style="position:relative; display:flex; align-items:center; gap:13px; height:44px; padding:0 13px; margin-bottom:4px; border:none; border-radius:11px; cursor:pointer; font-family:'Manrope'; font-size:14px; font-weight:600; text-align:left; transition:background .2s cubic-bezier(.4,0,.2,1), color .2s, box-shadow .2s; background:{{ nav.settings.bg }}; color:{{ nav.settings.color }}; box-shadow:{{ nav.settings.glow }};" style-hover="background:rgba(255,255,255,.045);">
+          <sc-if value="{{ nav.settings.active }}"><span style="position:absolute; left:-14px; top:12px; bottom:12px; width:3px; border-radius:0 4px 4px 0; background:linear-gradient(#ff5a68,#ff2740); box-shadow:0 0 12px rgba(255,40,60,.8);"></span></sc-if>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="7.5" x2="20" y2="7.5"/><line x1="4" y1="16.5" x2="20" y2="16.5"/><circle cx="15.5" cy="7.5" r="2.6" fill="#0a0a0d"/><circle cx="8.5" cy="16.5" r="2.6" fill="#0a0a0d"/></svg>
+          Ayarlar
+        </button>
+
+        <button onClick="{{ goAbout }}" style="position:relative; display:flex; align-items:center; gap:13px; height:44px; padding:0 13px; border:none; border-radius:11px; cursor:pointer; font-family:'Manrope'; font-size:14px; font-weight:600; text-align:left; transition:background .2s cubic-bezier(.4,0,.2,1), color .2s, box-shadow .2s; background:{{ nav.about.bg }}; color:{{ nav.about.color }}; box-shadow:{{ nav.about.glow }};" style-hover="background:rgba(255,255,255,.045);">
+          <sc-if value="{{ nav.about.active }}"><span style="position:absolute; left:-14px; top:12px; bottom:12px; width:3px; border-radius:0 4px 4px 0; background:linear-gradient(#ff5a68,#ff2740); box-shadow:0 0 12px rgba(255,40,60,.8);"></span></sc-if>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none"/></svg>
+          Hakkında
+        </button>
+
+        <div style="flex:1;"></div>
+
+        <div style="border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:13px; background:rgba(255,255,255,.018);">
+          <div style="display:flex; align-items:center; gap:9px; margin-bottom:11px;">
+            <span style="width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px 1px rgba(34,197,94,.7); animation:pulse 2.4s ease-in-out infinite;"></span>
+            <span style="font-size:12.5px; font-weight:600; color:#b9b9c2;">ffmpeg hazır</span>
+          </div>
+          <button onClick="{{ openGithub }}" style="width:100%; display:flex; align-items:center; gap:9px; height:34px; padding:0 11px; border-radius:9px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.025); color:#9a9aa2; cursor:pointer; font-family:'Manrope'; font-size:12px; font-weight:600; transition:background .18s, color .18s, border-color .18s;" style-hover="background:rgba(255,255,255,.05); color:#e0e0e6; border-color:rgba(255,255,255,.12);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.35 1.11 2.92.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05A9.36 9.36 0 0 1 12 6.85c.85 0 1.71.12 2.51.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.75 0 3.93-2.35 4.79-4.58 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.04 10.04 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
+            github.com/janleague
+          </button>
+        </div>
+      </div>
+
+      <!-- ───────── MAIN ───────── -->
+      <div style="width:935px; flex:1 1 935px; min-width:0; position:relative; display:flex; flex-direction:column; background:#0a0a0c;">
+        <div style="position:absolute; top:-80px; right:-60px; width:380px; height:280px; pointer-events:none; background:radial-gradient(closest-side, rgba(255,40,60,.10), rgba(255,40,60,0)); filter:blur(8px); z-index:0;"></div>
+        <div style="flex:1; min-height:0; overflow-y:auto; position:relative; z-index:1;">
+          <div style="padding:34px 40px 44px;">
+
+            <!-- ===== DOWNLOAD ===== -->
+            <sc-if value="{{ isDownload }}">
+            <div style="animation:pageIn .28s cubic-bezier(.4,0,.2,1);">
+              <h1 style="font-family:'Sora'; font-size:29px; font-weight:700; letter-spacing:-.6px; color:#f5f5f7; margin:0;">İndir</h1>
+              <p style="font-size:14.5px; color:#86868e; margin:7px 0 0; font-weight:500;">Bir bağlantı yapıştır, formatını seç ve indir.</p>
+
+              <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; color:#56565d; margin:26px 0 11px;">YOUTUBE BAĞLANTISI</div>
+              <div style="display:flex; gap:10px;">
+                <div style="position:relative; flex:1;">
+                  <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:#6a6a72; pointer-events:none; display:flex;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 15l6-6"/><path d="M11 6l1-1a4 4 0 0 1 6 6l-1 1"/><path d="M13 18l-1 1a4 4 0 0 1-6-6l1-1"/></svg>
+                  </span>
+                  <input value="{{ url }}" onInput="{{ onUrlInput }}" placeholder="https://www.youtube.com/watch?v=..." style="width:100%; box-sizing:border-box; height:54px; padding:0 44px; border-radius:14px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); color:#f4f4f6; font-family:'Manrope'; font-size:14px; font-weight:500; outline:none; transition:border-color .2s, box-shadow .2s, background .2s;" style-focus="border-color:rgba(255,40,60,.5); box-shadow:0 0 0 4px rgba(255,40,60,.1); background:rgba(255,255,255,.04);" />
+                  <sc-if value="{{ hasUrl }}">
+                    <button onClick="{{ clearUrl }}" style="position:absolute; right:13px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:none; border-radius:7px; background:rgba(255,255,255,.05); color:#86868e; cursor:pointer; transition:background .15s, color .15s;" style-hover="background:rgba(255,255,255,.1); color:#e4e4e8;">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                    </button>
+                  </sc-if>
+                </div>
+                <button onClick="{{ paste }}" style="display:flex; align-items:center; gap:9px; height:54px; padding:0 20px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#cfcfd4; cursor:pointer; font-family:'Manrope'; font-size:13.5px; font-weight:600; transition:transform .15s cubic-bezier(.4,0,.2,1), background .18s, border-color .18s;" style-hover="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14); transform:translateY(-1px);" style-active="transform:translateY(1px) scale(.98);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1.2"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg>
+                  Yapıştır
+                </button>
+              </div>
+
+              <sc-if value="{{ showPreview }}">
+                <div style="margin-top:13px; display:flex; gap:14px; align-items:center; padding:11px; border-radius:14px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07); animation:riseIn .26s cubic-bezier(.4,0,.2,1);">
+                  <div style="position:relative; width:118px; height:68px; flex:none; border-radius:9px; overflow:hidden; background:repeating-linear-gradient(125deg,#16161c 0 11px,#101015 11px 22px); display:flex; align-items:center; justify-content:center;">
+                    <div style="position:absolute; inset:0; background:radial-gradient(closest-side at 60% 40%, rgba(255,40,60,.18), rgba(0,0,0,0));"></div>
+                    <span style="width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,.45); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.18);">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><path d="M7 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 7 5.5Z"/></svg>
+                    </span>
+                    <span style="position:absolute; right:5px; bottom:5px; font-size:10px; font-weight:700; color:#fff; background:rgba(0,0,0,.7); padding:1px 5px; border-radius:4px;">9:56</span>
+                  </div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:14px; font-weight:600; color:#e7e7ea; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Big Buck Bunny — Blender Açık Kaynak Kısa Filmi</div>
+                    <div style="font-size:12.5px; color:#86868e; margin-top:3px; font-weight:500;">@blenderfoundation · 12M görüntülenme</div>
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                      <span style="font-size:10.5px; font-weight:600; color:#9a9aa2; padding:2px 8px; border-radius:6px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06);">1080p</span>
+                      <span style="font-size:10.5px; font-weight:600; color:#9a9aa2; padding:2px 8px; border-radius:6px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06);">mp4</span>
+                      <span style="font-size:10.5px; font-weight:600; color:#9a9aa2; padding:2px 8px; border-radius:6px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06);">~148 MB</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; color:#56565d; margin:24px 0 11px;">FORMAT</div>
+              <div style="display:flex; gap:12px;">
+                <button onClick="{{ selectMp3 }}" style="flex:1; display:flex; align-items:center; gap:14px; padding:17px; border-radius:15px; cursor:pointer; text-align:left; position:relative; transition:background .2s cubic-bezier(.4,0,.2,1), border-color .2s, box-shadow .2s, transform .15s; background:{{ fmt.mp3.bg }}; border:1px solid {{ fmt.mp3.border }}; box-shadow:{{ fmt.mp3.glow }};" style-hover="transform:translateY(-1px);">
+                  <span style="width:46px; height:46px; flex:none; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; background:{{ fmt.mp3.iconBg }}; box-shadow:{{ fmt.mp3.iconGlow }};">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+                  </span>
+                  <span style="display:flex; flex-direction:column; gap:3px;">
+                    <span style="font-family:'Sora'; font-size:16px; font-weight:700; color:#f4f4f6;">MP3</span>
+                    <span style="font-size:12.5px; font-weight:500; color:#86868e;">320 kbps · yalnızca ses</span>
+                  </span>
+                  <sc-if value="{{ fmt.mp3.selected }}"><span style="position:absolute; top:13px; right:13px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#ff3a47,#e0001a); box-shadow:0 2px 8px rgba(255,40,60,.5);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></sc-if>
+                </button>
+
+                <button onClick="{{ selectMp4 }}" style="flex:1; display:flex; align-items:center; gap:14px; padding:17px; border-radius:15px; cursor:pointer; text-align:left; position:relative; transition:background .2s cubic-bezier(.4,0,.2,1), border-color .2s, box-shadow .2s, transform .15s; background:{{ fmt.mp4.bg }}; border:1px solid {{ fmt.mp4.border }}; box-shadow:{{ fmt.mp4.glow }};" style-hover="transform:translateY(-1px);">
+                  <span style="width:46px; height:46px; flex:none; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; background:{{ fmt.mp4.iconBg }}; box-shadow:{{ fmt.mp4.iconGlow }};">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="14" height="14" rx="3"/><path d="m16.5 9.5 5-2.5v10l-5-2.5"/></svg>
+                  </span>
+                  <span style="display:flex; flex-direction:column; gap:3px;">
+                    <span style="font-family:'Sora'; font-size:16px; font-weight:700; color:#f4f4f6;">MP4</span>
+                    <span style="font-size:12.5px; font-weight:500; color:#86868e;">video + ses · 4K'ya kadar</span>
+                  </span>
+                  <sc-if value="{{ fmt.mp4.selected }}"><span style="position:absolute; top:13px; right:13px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#3d8bff,#1456d6); box-shadow:0 2px 8px rgba(45,123,255,.5);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></sc-if>
+                </button>
+              </div>
+
+              <sc-if value="{{ isMp4 }}">
+                <div style="animation:riseIn .24s ease;">
+                  <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; color:#56565d; margin:22px 0 11px;">ÇÖZÜNÜRLÜK</div>
+                  <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                    <sc-for list="{{ resolutions }}" as="r" hint-placeholder-count="7">
+                      <button onClick="{{ r.select }}" style="height:38px; padding:0 16px; border-radius:10px; cursor:pointer; font-family:'Manrope'; font-size:13px; font-weight:600; transition:background .18s, color .18s, border-color .18s, transform .12s; background:{{ r.bg }}; color:{{ r.color }}; border:1px solid {{ r.border }};" style-hover="transform:translateY(-1px);">{{ r.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <button onClick="{{ startDownload }}" style="margin-top:24px; width:100%; height:56px; border:none; border-radius:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; font-family:'Sora'; font-size:16px; font-weight:700; color:#fff; background:linear-gradient(135deg,#ff3a47,#e0001a); box-shadow:0 12px 36px -8px rgba(255,40,60,.55), inset 0 1px 0 rgba(255,255,255,.2); transition:transform .15s cubic-bezier(.4,0,.2,1), box-shadow .2s, filter .2s;" style-hover="transform:translateY(-2px); box-shadow:0 18px 48px -8px rgba(255,40,60,.72), inset 0 1px 0 rgba(255,255,255,.24); filter:brightness(1.05);" style-active="transform:translateY(1px) scale(.992); box-shadow:0 6px 18px -8px rgba(255,40,60,.5);">
+                <sc-if value="{{ busy }}"><span style="width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .7s linear infinite; display:inline-block;"></span></sc-if>
+                <sc-if value="{{ idle }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg></sc-if>
+                {{ downloadLabel }}
+              </button>
+
+              <div style="margin-top:22px; border-radius:16px; background:rgba(255,255,255,.022); border:1px solid rgba(255,255,255,.06); padding:19px 20px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <sc-if value="{{ busy }}"><span style="width:15px; height:15px; border-radius:50%; border:2px solid rgba(255,255,255,.18); border-top-color:#ff5a68; animation:spin .7s linear infinite; display:inline-block;"></span></sc-if>
+                  <sc-if value="{{ idle }}"><span style="width:8px; height:8px; border-radius:50%; background:{{ statusColor }}; box-shadow:0 0 8px {{ statusGlow }};"></span></sc-if>
+                  <span style="font-size:14px; font-weight:600; color:{{ statusColor }};">{{ status }}</span>
+                  <div style="flex:1;"></div>
+                  <span style="font-family:'Sora'; font-weight:700; font-size:19px; color:{{ pctColor }}; letter-spacing:-.3px;">{{ pctText }}</span>
+                </div>
+                <div style="margin-top:14px; height:8px; border-radius:6px; background:rgba(255,255,255,.05); overflow:hidden;">
+                  <div style="height:100%; border-radius:6px; width:{{ barWidth }}; background:{{ barColor }}; box-shadow:{{ barGlow }}; transition:width .28s cubic-bezier(.4,0,.2,1), background .3s;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:11px;">
+                  <span style="font-size:12px; font-weight:500; color:#7a7a82;">{{ speed }}</span>
+                  <span style="font-size:12px; font-weight:500; color:#7a7a82;">{{ eta }}</span>
+                </div>
+              </div>
+            </div>
+            </sc-if>
+
+            <!-- ===== LIBRARY ===== -->
+            <sc-if value="{{ isLibrary }}">
+            <div style="animation:pageIn .28s cubic-bezier(.4,0,.2,1);">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:18px;">
+                <div>
+                  <h1 style="font-family:'Sora'; font-size:29px; font-weight:700; letter-spacing:-.6px; color:#f5f5f7; margin:0;">Kütüphane</h1>
+                  <p style="font-size:14.5px; color:#86868e; margin:7px 0 0; font-weight:500;">İndirdiğin dosyalar burada.</p>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <button onClick="{{ openFolder }}" style="display:flex; align-items:center; gap:8px; height:42px; padding:0 15px; border-radius:11px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#cfcfd4; cursor:pointer; font-family:'Manrope'; font-size:12.5px; font-weight:600; transition:background .18s, border-color .18s, transform .15s;" style-hover="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14); transform:translateY(-1px);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l2 2.5h7A1.5 1.5 0 0 1 19 10v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 3 17V7.5Z"/></svg>
+                    Klasörü Aç
+                  </button>
+                  <div style="position:relative; width:238px;">
+                    <span style="position:absolute; left:13px; top:50%; transform:translateY(-50%); color:#6a6a72; display:flex; pointer-events:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></span>
+                    <input value="{{ query }}" onInput="{{ onQueryInput }}" placeholder="Ara..." style="width:100%; box-sizing:border-box; height:42px; padding:0 14px 0 38px; border-radius:11px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); color:#f4f4f6; font-family:'Manrope'; font-size:13px; font-weight:500; outline:none; transition:border-color .2s, box-shadow .2s;" style-focus="border-color:rgba(255,40,60,.5); box-shadow:0 0 0 4px rgba(255,40,60,.1);" />
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+                <sc-for list="{{ libItems }}" as="it" hint-placeholder-count="6">
+                  <div onClick="{{ it.open }}" style="border-radius:15px; overflow:hidden; background:rgba(255,255,255,.022); border:1px solid rgba(255,255,255,.06); cursor:pointer; transition:transform .22s cubic-bezier(.4,0,.2,1), border-color .22s, box-shadow .22s;" style-hover="transform:translateY(-4px); border-color:rgba(255,255,255,.13); box-shadow:0 20px 44px -18px rgba(0,0,0,.75);">
+                    <div style="position:relative; height:104px; background:repeating-linear-gradient(125deg,#16161c 0 12px,#101015 12px 24px); display:flex; align-items:center; justify-content:center;">
+                      <div style="position:absolute; inset:0; background:{{ it.tint }};"></div>
+                      <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.45));"></div>
+                      <span style="position:relative; width:34px; height:34px; border-radius:50%; background:rgba(0,0,0,.4); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; color:#fff;">{{ it.icon }}</span>
+                      <span style="position:absolute; top:9px; left:9px; font-size:10px; font-weight:700; letter-spacing:.4px; color:#fff; padding:2px 7px; border-radius:6px; background:{{ it.badgeBg }}; box-shadow:0 2px 8px {{ it.badgeGlow }};">{{ it.format }}</span>
+                      <span style="position:absolute; bottom:8px; right:9px; font-size:10px; font-weight:700; color:#fff; background:rgba(0,0,0,.6); padding:1px 6px; border-radius:5px;">{{ it.duration }}</span>
+                    </div>
+                    <div style="padding:12px 13px 13px;">
+                      <div style="font-size:13px; font-weight:600; color:#e7e7ea; line-height:1.35; height:36px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">{{ it.title }}</div>
+                      <div style="font-size:11.5px; font-weight:500; color:#6a6a72; margin-top:8px;">{{ it.meta }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <sc-if value="{{ libEmpty }}">
+                <div style="margin-top:60px; display:flex; flex-direction:column; align-items:center; gap:12px; color:#56565d;">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="7.2" height="7.2" rx="1.6"/><rect x="13.8" y="3" width="7.2" height="7.2" rx="1.6"/><rect x="3" y="13.8" width="7.2" height="7.2" rx="1.6"/><rect x="13.8" y="13.8" width="7.2" height="7.2" rx="1.6"/></svg>
+                  <span style="font-size:13.5px; font-weight:500;">{{ emptyText }}</span>
+                </div>
+              </sc-if>
+            </div>
+            </sc-if>
+
+            <!-- ===== SETTINGS ===== -->
+            <sc-if value="{{ isSettings }}">
+            <div style="animation:pageIn .28s cubic-bezier(.4,0,.2,1); max-width:760px;">
+              <h1 style="font-family:'Sora'; font-size:29px; font-weight:700; letter-spacing:-.6px; color:#f5f5f7; margin:0;">Ayarlar</h1>
+              <p style="font-size:14.5px; color:#86868e; margin:7px 0 0; font-weight:500;">Uygulamayı tercihlerine göre yapılandır.</p>
+
+              <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; color:#56565d; margin:28px 0 11px;">İNDİRME</div>
+              <div style="border-radius:16px; background:rgba(255,255,255,.022); border:1px solid rgba(255,255,255,.06); padding:4px 18px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0;">
+                  <div><div style="font-size:14px; font-weight:600; color:#e7e7ea;">İndirme klasörü</div><div style="font-size:12.5px; color:#7a7a82; margin-top:3px; font-family:'Manrope';">{{ downloadFolder }}</div></div>
+                  <button onClick="{{ changeFolder }}" style="flex:none; display:flex; align-items:center; gap:8px; height:38px; padding:0 14px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#cfcfd4; cursor:pointer; font-family:'Manrope'; font-size:12.5px; font-weight:600; transition:background .18s, border-color .18s;" style-hover="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14);">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l2 2.5h7A1.5 1.5 0 0 1 19 10v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 3 17V7.5Z"/></svg>
+                    Değiştir
+                  </button>
+                </div>
+                <div style="height:1px; background:rgba(255,255,255,.05);"></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0;">
+                  <div><div style="font-size:14px; font-weight:600; color:#e7e7ea;">Varsayılan format</div><div style="font-size:12.5px; color:#7a7a82; margin-top:3px;">Yeni indirmelerde önceden seçili</div></div>
+                  <div style="display:flex; gap:3px; padding:3px; border-radius:11px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);">
+                    <button onClick="{{ setFmtMp3 }}" style="height:30px; padding:0 16px; border:none; border-radius:8px; cursor:pointer; font-family:'Manrope'; font-size:12.5px; font-weight:700; transition:background .18s, color .18s; background:{{ seg.mp3.bg }}; color:{{ seg.mp3.color }}; box-shadow:{{ seg.mp3.glow }};">MP3</button>
+                    <button onClick="{{ setFmtMp4 }}" style="height:30px; padding:0 16px; border:none; border-radius:8px; cursor:pointer; font-family:'Manrope'; font-size:12.5px; font-weight:700; transition:background .18s, color .18s; background:{{ seg.mp4.bg }}; color:{{ seg.mp4.color }}; box-shadow:{{ seg.mp4.glow }};">MP4</button>
+                  </div>
+                </div>
+                <div style="height:1px; background:rgba(255,255,255,.05);"></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0;">
+                  <div><div style="font-size:14px; font-weight:600; color:#e7e7ea;">Ses kalitesi</div><div style="font-size:12.5px; color:#7a7a82; margin-top:3px;">MP3 dönüşüm bit hızı</div></div>
+                  <div style="position:relative;">
+                    <button onClick="{{ toggleQuality }}" style="display:flex; align-items:center; gap:9px; height:38px; padding:0 13px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#dcdce2; cursor:pointer; font-family:'Manrope'; font-size:13px; font-weight:600; transition:background .18s, border-color .18s;" style-hover="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14);">
+                      {{ audioQuality }}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:{{ qualityChevron }}; transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <sc-if value="{{ qualityOpen }}">
+                      <div onClick="{{ toggleQuality }}" style="position:fixed; inset:0; z-index:18;"></div>
+                      <div style="position:absolute; right:0; top:44px; z-index:20; min-width:148px; padding:5px; border-radius:12px; background:#141418; border:1px solid rgba(255,255,255,.1); box-shadow:0 20px 44px -14px rgba(0,0,0,.75); animation:riseIn .16s ease;">
+                        <sc-for list="{{ qualityOptions }}" as="q" hint-placeholder-count="4">
+                          <button onClick="{{ q.select }}" style="width:100%; display:flex; align-items:center; justify-content:space-between; height:34px; padding:0 11px; border:none; border-radius:8px; cursor:pointer; font-family:'Manrope'; font-size:12.5px; font-weight:600; transition:background .15s; background:transparent; color:{{ q.color }};" style-hover="background:rgba(255,255,255,.05);">{{ q.label }}<sc-if value="{{ q.selected }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff5a68" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></sc-if></button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+
+              <div style="font-size:11px; font-weight:700; letter-spacing:1.5px; color:#56565d; margin:26px 0 11px;">GENEL</div>
+              <div style="border-radius:16px; background:rgba(255,255,255,.022); border:1px solid rgba(255,255,255,.06); padding:4px 18px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0;">
+                  <div><div style="font-size:14px; font-weight:600; color:#e7e7ea;">Dil</div><div style="font-size:12.5px; color:#7a7a82; margin-top:3px;">Arayüz dili</div></div>
+                  <div style="position:relative;">
+                    <button onClick="{{ toggleLang }}" style="display:flex; align-items:center; gap:9px; height:38px; padding:0 13px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#dcdce2; cursor:pointer; font-family:'Manrope'; font-size:13px; font-weight:600; transition:background .18s, border-color .18s;" style-hover="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14);">
+                      {{ language }}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:{{ langChevron }}; transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <sc-if value="{{ langOpen }}">
+                      <div onClick="{{ toggleLang }}" style="position:fixed; inset:0; z-index:18;"></div>
+                      <div style="position:absolute; right:0; top:44px; z-index:20; min-width:148px; padding:5px; border-radius:12px; background:#141418; border:1px solid rgba(255,255,255,.1); box-shadow:0 20px 44px -14px rgba(0,0,0,.75); animation:riseIn .16s ease;">
+                        <sc-for list="{{ langOptions }}" as="l" hint-placeholder-count="4">
+                          <button onClick="{{ l.select }}" style="width:100%; display:flex; align-items:center; justify-content:space-between; height:34px; padding:0 11px; border:none; border-radius:8px; cursor:pointer; font-family:'Manrope'; font-size:12.5px; font-weight:600; transition:background .15s; background:transparent; color:{{ l.color }};" style-hover="background:rgba(255,255,255,.05);">{{ l.label }}<sc-if value="{{ l.selected }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ff5a68" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></sc-if></button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+                <div style="height:1px; background:rgba(255,255,255,.05);"></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0;">
+                  <div><div style="font-size:14px; font-weight:600; color:#e7e7ea;">Bildirimler</div><div style="font-size:12.5px; color:#7a7a82; margin-top:3px;">İndirme bitince masaüstü bildirimi</div></div>
+                  <button onClick="{{ toggleNotif }}" style="flex:none; width:46px; height:27px; border-radius:14px; border:none; cursor:pointer; position:relative; padding:0; background:{{ notifTrack }}; transition:background .22s;">
+                    <span style="position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%; background:#fff; transform:{{ notifKnob }}; transition:transform .24s cubic-bezier(.4,0,.2,1); box-shadow:0 1px 3px rgba(0,0,0,.4);"></span>
+                  </button>
+                </div>
+                <div style="height:1px; background:rgba(255,255,255,.05);"></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0;">
+                  <div><div style="font-size:14px; font-weight:600; color:#e7e7ea;">Koyu tema</div><div style="font-size:12.5px; color:#7a7a82; margin-top:3px;">Her zaman karanlık modda çalış</div></div>
+                  <button onClick="{{ toggleDark }}" style="flex:none; width:46px; height:27px; border-radius:14px; border:none; cursor:pointer; position:relative; padding:0; background:{{ darkTrack }}; transition:background .22s;">
+                    <span style="position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%; background:#fff; transform:{{ darkKnob }}; transition:transform .24s cubic-bezier(.4,0,.2,1); box-shadow:0 1px 3px rgba(0,0,0,.4);"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            </sc-if>
+
+            <!-- ===== ABOUT ===== -->
+            <sc-if value="{{ isAbout }}">
+            <div style="animation:pageIn .28s cubic-bezier(.4,0,.2,1); max-width:760px;">
+              <h1 style="font-family:'Sora'; font-size:29px; font-weight:700; letter-spacing:-.6px; color:#f5f5f7; margin:0;">Hakkında</h1>
+              <p style="font-size:14.5px; color:#86868e; margin:7px 0 0; font-weight:500;">Uygulama, geliştirici ve teknoloji bilgileri.</p>
+
+              <div style="margin-top:26px; display:flex; align-items:center; gap:20px; padding:24px; border-radius:18px; background:rgba(255,255,255,.022); border:1px solid rgba(255,255,255,.06);">
+                <div style="width:64px; height:64px; flex:none; border-radius:18px; display:flex; align-items:center; justify-content:center; background:linear-gradient(150deg,#ff3a47,#e0001a); box-shadow:0 14px 36px -8px rgba(255,40,60,.6), inset 0 1px 0 rgba(255,255,255,.25);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M7 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 7 5.5Z"/></svg>
+                </div>
+                <div style="flex:1;">
+                  <div style="font-family:'Sora'; font-size:21px; font-weight:700; color:#f4f4f6; letter-spacing:-.4px;">YouTube İndirici</div>
+                  <div style="font-size:13px; color:#86868e; margin-top:2px; font-weight:500;">Sürüm 2.0 · Tauri sürümü</div>
+                  <div style="display:inline-flex; align-items:center; gap:7px; margin-top:11px; padding:5px 11px; border-radius:8px; background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25);">
+                    <span style="width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 7px 1px rgba(34,197,94,.7);"></span>
+                    <span style="font-size:11.5px; font-weight:600; color:#4ade80;">ffmpeg yüklü ve hazır</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:16px; display:flex; gap:14px;">
+                <div style="flex:1; padding:18px; border-radius:16px; background:rgba(255,255,255,.022); border:1px solid rgba(255,255,255,.06);">
+                  <div style="font-size:11px; font-weight:700; letter-spacing:1px; color:#56565d;">GELİŞTİRİCİ</div>
+                  <div style="display:flex; align-items:center; gap:12px; margin-top:14px;">
+                    <img src="assets/janleague-avatar-round.png" alt="janleague" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,.12);" />
+                    <div><div style="font-size:14px; font-weight:700; color:#e7e7ea;">janleague</div><div style="font-size:12px; color:#86868e; margin-top:2px;">github.com/janleague</div></div>
+                  </div>
+                  <button onClick="{{ openGithub }}" style="margin-top:15px; width:100%; display:flex; align-items:center; justify-content:center; gap:9px; height:38px; border-radius:10px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#cfcfd4; cursor:pointer; font-family:'Manrope'; font-size:12.5px; font-weight:600; transition:background .18s, border-color .18s, transform .15s;" style-hover="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14); transform:translateY(-1px);">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.35 1.11 2.92.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05A9.36 9.36 0 0 1 12 6.85c.85 0 1.71.12 2.51.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.75 0 3.93-2.35 4.79-4.58 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.04 10.04 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
+                    GitHub Profili
+                  </button>
+                </div>
+                <div style="flex:1; padding:18px; border-radius:16px; background:rgba(255,255,255,.022); border:1px solid rgba(255,255,255,.06);">
+                  <div style="font-size:11px; font-weight:700; letter-spacing:1px; color:#56565d;">TEKNOLOJİ</div>
+                  <div style="margin-top:14px; display:flex; flex-direction:column; gap:11px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:500; color:#cfcfd4;">Arayüz</span><span style="font-family:'Sora'; font-size:12.5px; font-weight:600; color:#86868e;">React + Tauri</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:500; color:#cfcfd4;">Motor</span><span style="font-family:'Sora'; font-size:12.5px; font-weight:600; color:#86868e;">yt-dlp</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:500; color:#cfcfd4;">Dönüştürücü</span><span style="font-family:'Sora'; font-size:12.5px; font-weight:600; color:#86868e;">ffmpeg</span></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:500; color:#cfcfd4;">Lisans</span><span style="font-family:'Sora'; font-size:12.5px; font-weight:600; color:#86868e;">MIT</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <p style="text-align:center; font-size:12px; color:#4d4d55; margin:22px 0 0; font-weight:500;">YouTube İndirici · açık kaynak · MIT lisansı altında dağıtılır.</p>
+            </div>
+            </sc-if>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1260,&quot;height&quot;:824},&quot;startPage&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;download&quot;,&quot;library&quot;,&quot;settings&quot;,&quot;about&quot;],&quot;default&quot;:&quot;download&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = {
+    page: this.props.startPage || 'download',
+    url: '',
+    format: 'mp3',
+    resolution: '1080p',
+    busy: false,
+    progress: 0,
+    status: 'İndirmeye hazır',
+    level: 'idle',
+    speed: '',
+    eta: '',
+    query: '',
+    defaultFormat: 'mp3',
+    audioQuality: '320 kbps',
+    language: 'Türkçe',
+    notifications: true,
+    darkTheme: true,
+    qualityOpen: false,
+    langOpen: false,
+    downloadFolder: 'C:\\Users\\jan\\Music\\YouTube İndirici',
+  };
+
+  componentWillUnmount() { clearInterval(this._t); }
+
+  invoke(cmd, args) {
+    // ─── TAURI BAĞLANTI NOKTASI ───
+    // Gerçek uygulamada: import { invoke } from '@tauri-apps/api/core';
+    console.log('[tauri.invoke]', cmd, args || {});
+    return Promise.resolve();
+  }
+
+  setPage(p) { this.setState({ page: p, qualityOpen: false, langOpen: false }); }
+
+  selectResolution(v) { this.setState({ resolution: v }); }
+
+  startDownload() {
+    if (this.state.busy) return;
+    const { url, format, resolution } = this.state;
+    this.invoke('download_video', { url, format, resolution: format === 'mp4' ? resolution : null });
+    clearInterval(this._t);
+    this.setState({ busy: true, progress: 0, status: 'Bağlanılıyor…', level: 'info', speed: '', eta: '' });
+    let p = 0;
+    this._t = setInterval(() => {
+      p += Math.random() * 6 + 2.5;
+      if (p >= 100) {
+        clearInterval(this._t);
+        this.invoke('download_complete', { url: this.state.url });
+        this.setState({ progress: 100, busy: false, status: 'İndirme tamamlandı', level: 'success', speed: '', eta: 'bitti' });
+        return;
+      }
+      this.setState({
+        progress: p,
+        status: this.state.format === 'mp3' ? 'Ses çıkarılıyor…' : 'Video indiriliyor…',
+        level: 'info',
+        speed: (Math.random() * 4 + 2).toFixed(1) + ' MB/s',
+        eta: Math.max(1, Math.ceil((100 - p) / 9)) + ' sn kaldı',
+      });
+    }, 280);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const mkNav = (p) => ({
+      active: s.page === p,
+      bg: s.page === p ? 'rgba(255,40,60,0.09)' : 'transparent',
+      color: s.page === p ? '#ffffff' : '#9a9aa2',
+      glow: s.page === p ? 'inset 0 0 0 1px rgba(255,40,60,0.16)' : 'none',
+    });
+
+    const fmtState = (f, sel) => sel ? {
+      selected: true,
+      bg: f === 'mp3' ? 'rgba(255,40,60,0.07)' : 'rgba(45,123,255,0.07)',
+      border: f === 'mp3' ? 'rgba(255,40,60,0.45)' : 'rgba(45,123,255,0.45)',
+      glow: f === 'mp3' ? 'inset 0 0 0 1px rgba(255,40,60,0.2), 0 10px 34px -12px rgba(255,40,60,0.4)' : 'inset 0 0 0 1px rgba(45,123,255,0.2), 0 10px 34px -12px rgba(45,123,255,0.4)',
+      iconBg: f === 'mp3' ? 'linear-gradient(150deg,#ff3a47,#e0001a)' : 'linear-gradient(150deg,#3d8bff,#1456d6)',
+      iconGlow: f === 'mp3' ? '0 6px 18px -4px rgba(255,40,60,0.6)' : '0 6px 18px -4px rgba(45,123,255,0.6)',
+    } : {
+      selected: false,
+      bg: 'rgba(255,255,255,0.022)',
+      border: 'rgba(255,255,255,0.07)',
+      glow: 'none',
+      iconBg: 'rgba(255,255,255,0.06)',
+      iconGlow: 'none',
+    };
+
+    const RES = ['2160p', '1440p', '1080p', '720p', '480p', '360p', 'En İyi'];
+    const resolutions = RES.map((v) => {
+      const sel = s.resolution === v;
+      return {
+        label: v,
+        bg: sel ? 'rgba(255,40,60,0.12)' : 'rgba(255,255,255,0.03)',
+        color: sel ? '#ff8089' : '#9a9aa2',
+        border: sel ? 'rgba(255,40,60,0.4)' : 'rgba(255,255,255,0.07)',
+        select: () => this.selectResolution(v),
+      };
+    });
+
+    const ICON_MUSIC = React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('path', { d: 'M9 18V5l11-2v13' }), React.createElement('circle', { cx: 6, cy: 18, r: 3 }), React.createElement('circle', { cx: 17, cy: 16, r: 3 }));
+    const ICON_VIDEO = React.createElement('svg', { width: 13, height: 13, viewBox: '0 0 24 24', fill: '#fff' }, React.createElement('path', { d: 'M7 5.5v13a1 1 0 0 0 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 7 5.5Z' }));
+
+    const RAW = [
+      { title: 'Big Buck Bunny — Blender Açık Kaynak Kısa Filmi', format: 'MP4', size: '148 MB', quality: '1080p', duration: '9:56' },
+      { title: 'Lofi Hip Hop — Çalışmak ve Dinlenmek İçin Beat Seti', format: 'MP3', size: '11.4 MB', quality: '320 kbps', duration: '4:58' },
+      { title: 'Sintel — Durian Open Movie Project (Tam Sürüm)', format: 'MP4', size: '212 MB', quality: '1440p', duration: '14:48' },
+      { title: 'Akustik Gitar — Sabah Kahvesi Çalma Listesi', format: 'MP3', size: '8.2 MB', quality: '256 kbps', duration: '3:34' },
+      { title: 'Tears of Steel — Bilim Kurgu Kısa Filmi 4K', format: 'MP4', size: '486 MB', quality: '2160p', duration: '12:14' },
+      { title: 'Yağmur Sesi — Derin Odaklanma ve Uyku Ambiyansı', format: 'MP3', size: '14.9 MB', quality: '320 kbps', duration: '6:30' },
+    ];
+    const needle = s.query.trim().toLowerCase();
+    const libItems = RAW.filter((it) => !needle || it.title.toLowerCase().includes(needle)).map((it) => ({
+      title: it.title,
+      format: it.format,
+      meta: it.size + '  ·  ' + it.quality,
+      duration: it.duration,
+      icon: it.format === 'MP3' ? ICON_MUSIC : ICON_VIDEO,
+      tint: it.format === 'MP3' ? 'radial-gradient(closest-side at 35% 30%, rgba(255,40,60,0.16), rgba(0,0,0,0))' : 'radial-gradient(closest-side at 35% 30%, rgba(45,123,255,0.16), rgba(0,0,0,0))',
+      badgeBg: it.format === 'MP3' ? 'linear-gradient(135deg,#ff3a47,#e0001a)' : 'linear-gradient(135deg,#3d8bff,#1456d6)',
+      badgeGlow: it.format === 'MP3' ? 'rgba(255,40,60,0.5)' : 'rgba(45,123,255,0.5)',
+      open: () => this.invoke('open_file', { title: it.title }),
+    }));
+
+    const seg = (f) => ({
+      bg: s.defaultFormat === f ? 'linear-gradient(135deg,#ff3a47,#e0001a)' : 'transparent',
+      color: s.defaultFormat === f ? '#ffffff' : '#9a9aa2',
+      glow: s.defaultFormat === f ? '0 4px 14px -4px rgba(255,40,60,0.6)' : 'none',
+    });
+
+    const qualityOptions = ['320 kbps', '256 kbps', '192 kbps', '128 kbps'].map((q) => ({
+      label: q,
+      selected: s.audioQuality === q,
+      color: s.audioQuality === q ? '#f4f4f6' : '#b9b9c2',
+      select: () => { this.invoke('set_audio_quality', { quality: q }); this.setState({ audioQuality: q, qualityOpen: false }); },
+    }));
+    const langOptions = ['Türkçe', 'English', 'Deutsch', 'Español'].map((l) => ({
+      label: l,
+      selected: s.language === l,
+      color: s.language === l ? '#f4f4f6' : '#b9b9c2',
+      select: () => { this.invoke('set_language', { lang: l }); this.setState({ language: l, langOpen: false }); },
+    }));
+
+    const statusColors = { idle: '#9a9aa2', info: '#cfcfd4', success: '#4ade80', error: '#f87171' };
+    const statusGlowMap = { idle: 'rgba(154,154,162,0.5)', info: 'rgba(207,207,212,0.4)', success: 'rgba(74,222,128,0.6)', error: 'rgba(248,113,113,0.6)' };
+    const complete = s.progress >= 100 && !s.busy && s.level === 'success';
+
+    return {
+      nav: { download: mkNav('download'), library: mkNav('library'), settings: mkNav('settings'), about: mkNav('about') },
+      goDownload: () => this.setPage('download'),
+      goLibrary: () => this.setPage('library'),
+      goSettings: () => this.setPage('settings'),
+      goAbout: () => this.setPage('about'),
+      isDownload: s.page === 'download',
+      isLibrary: s.page === 'library',
+      isSettings: s.page === 'settings',
+      isAbout: s.page === 'about',
+
+      url: s.url,
+      hasUrl: s.url.trim().length > 0,
+      showPreview: s.url.trim().length > 6,
+      onUrlInput: (e) => this.setState({ url: e.target.value }),
+      clearUrl: () => this.setState({ url: '' }),
+      paste: () => { this.invoke('read_clipboard'); this.setState({ url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ' }); },
+
+      fmt: { mp3: fmtState('mp3', s.format === 'mp3'), mp4: fmtState('mp4', s.format === 'mp4') },
+      selectMp3: () => this.setState({ format: 'mp3' }),
+      selectMp4: () => this.setState({ format: 'mp4' }),
+      isMp4: s.format === 'mp4',
+      resolutions,
+
+      startDownload: () => this.startDownload(),
+      busy: s.busy,
+      idle: !s.busy,
+      downloadLabel: s.busy ? 'İndiriliyor…' : 'İndir',
+      status: s.status,
+      statusColor: statusColors[s.level] || '#cfcfd4',
+      statusGlow: statusGlowMap[s.level] || 'rgba(207,207,212,0.4)',
+      pctText: '%' + s.progress.toFixed(1),
+      pctColor: complete ? '#4ade80' : '#ff5a68',
+      barWidth: s.progress + '%',
+      barColor: complete ? 'linear-gradient(90deg,#16a34a,#4ade80)' : 'linear-gradient(90deg,#e0001a,#ff5a68)',
+      barGlow: s.progress > 0 ? (complete ? '0 0 14px rgba(34,197,94,0.55)' : '0 0 14px rgba(255,40,60,0.55)') : 'none',
+      speed: s.speed,
+      eta: s.eta,
+
+      query: s.query,
+      onQueryInput: (e) => this.setState({ query: e.target.value }),
+      libItems,
+      libEmpty: libItems.length === 0,
+      emptyText: needle ? 'Eşleşen dosya bulunamadı.' : 'Henüz indirilmiş dosya yok.',
+      openFolder: () => this.invoke('open_download_folder'),
+
+      downloadFolder: s.downloadFolder,
+      changeFolder: () => this.invoke('pick_folder'),
+      seg: { mp3: seg('mp3'), mp4: seg('mp4') },
+      setFmtMp3: () => { this.invoke('set_default_format', { format: 'mp3' }); this.setState({ defaultFormat: 'mp3' }); },
+      setFmtMp4: () => { this.invoke('set_default_format', { format: 'mp4' }); this.setState({ defaultFormat: 'mp4' }); },
+      audioQuality: s.audioQuality,
+      qualityOpen: s.qualityOpen,
+      qualityChevron: s.qualityOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+      toggleQuality: () => this.setState({ qualityOpen: !s.qualityOpen, langOpen: false }),
+      qualityOptions,
+      language: s.language,
+      langOpen: s.langOpen,
+      langChevron: s.langOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+      toggleLang: () => this.setState({ langOpen: !s.langOpen, qualityOpen: false }),
+      langOptions,
+      notifTrack: s.notifications ? 'linear-gradient(135deg,#ff3a47,#e0001a)' : 'rgba(255,255,255,0.12)',
+      notifKnob: s.notifications ? 'translateX(19px)' : 'translateX(0)',
+      toggleNotif: () => { this.invoke('set_notifications', { on: !s.notifications }); this.setState({ notifications: !s.notifications }); },
+      darkTrack: s.darkTheme ? 'linear-gradient(135deg,#ff3a47,#e0001a)' : 'rgba(255,255,255,0.12)',
+      darkKnob: s.darkTheme ? 'translateX(19px)' : 'translateX(0)',
+      toggleDark: () => { this.invoke('set_dark_theme', { on: !s.darkTheme }); this.setState({ darkTheme: !s.darkTheme }); },
+
+      openGithub: () => this.invoke('open_url', { url: 'https://github.com/janleague' }),
+      winMin: () => this.invoke('window_minimize'),
+      winMax: () => this.invoke('window_toggle_maximize'),
+      winClose: () => this.invoke('window_close'),
+    };
+  }
+}
+</script>
+</body>
+</html>

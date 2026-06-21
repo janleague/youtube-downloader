@@ -1,10 +1,10 @@
-"""Uygulama verilerini AppData altında tutan kalıcı tercih deposu."""
+"""AppData altında tutulan, GUI'den bağımsız kalıcı tercih deposu."""
 
 from __future__ import annotations
 
+import configparser
+import os
 from pathlib import Path
-
-from PyQt6.QtCore import QSettings, QStandardPaths
 
 
 ORGANIZATION = "janleague"
@@ -12,16 +12,22 @@ APPLICATION = "YouTubeDownloader"
 
 
 def default_data_root() -> Path:
-    """Ayarlar, metadata ve varsayılan indirmeler için yazılabilir ana klasör."""
-    local_data = QStandardPaths.writableLocation(
-        QStandardPaths.StandardLocation.GenericDataLocation
-    )
+    local_data = os.environ.get("LOCALAPPDATA")
     if local_data:
         return Path(local_data) / ORGANIZATION / APPLICATION
     return Path.home() / "AppData" / "Local" / ORGANIZATION / APPLICATION
 
 
 class SettingsStore:
+    DEFAULTS = {
+        "default_format": "MP3",
+        "resolution": "1080p",
+        "audio_quality": "320",
+        "language": "tr",
+        "notifications": "true",
+        "dark_theme": "true",
+    }
+
     def __init__(
         self,
         app_dir: Path | None = None,
@@ -35,51 +41,63 @@ class SettingsStore:
         self.settings_path = self.data_root / "settings.ini"
         self.default_downloads = self.data_root / "Downloads"
         self.default_downloads.mkdir(parents=True, exist_ok=True)
-
-        self._settings = QSettings(
-            str(self.settings_path),
-            QSettings.Format.IniFormat,
-        )
+        self._config = configparser.ConfigParser()
+        self._config.read(self.settings_path, encoding="utf-8")
+        if not self._config.has_section("General"):
+            self._config.add_section("General")
         if migrate_legacy:
-            self._migrate_native_settings()
+            self._migrate_legacy_registry()
 
-    def _migrate_native_settings(self):
-        """Eski Registry ayarlarını ilk açılışta yeni INI dosyasına taşır."""
-        if self._settings.value("_storage_version"):
+    def _migrate_legacy_registry(self):
+        section = self._config["General"]
+        if section.get("_storage_version"):
             return
+        if os.name == "nt" and not list(section.keys()):
+            try:
+                import winreg
 
-        legacy = QSettings(ORGANIZATION, APPLICATION)
-        if not self._settings.allKeys():
-            for key in legacy.allKeys():
-                value = legacy.value(key)
-                if key == "downloads_dir" and self._is_legacy_default(value):
-                    continue
-                self._settings.setValue(key, value)
-        self._settings.setValue("_storage_version", 2)
-        self._settings.sync()
+                key_path = rf"Software\{ORGANIZATION}\{APPLICATION}"
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
+                    index = 0
+                    while True:
+                        try:
+                            name, value, _ = winreg.EnumValue(key, index)
+                        except OSError:
+                            break
+                        if name != "downloads_dir" or not self._is_legacy_default(value):
+                            section[name] = str(value)
+                        index += 1
+            except OSError:
+                pass
+        section["_storage_version"] = "3"
+        self._sync()
 
     @staticmethod
     def _is_legacy_default(value) -> bool:
         if not value:
             return False
-        downloads_root = QStandardPaths.writableLocation(
-            QStandardPaths.StandardLocation.DownloadLocation
-        )
-        if not downloads_root:
-            downloads_root = str(Path.home() / "Downloads")
         try:
             return Path(str(value)).resolve() == (
-                Path(downloads_root) / "YouTube Downloader"
+                Path.home() / "Downloads" / "YouTube Downloader"
             ).resolve()
         except OSError:
             return False
 
     def value(self, key: str, default=None):
-        return self._settings.value(key, default)
+        fallback = self.DEFAULTS.get(key, default)
+        return self._config["General"].get(key, fallback)
 
     def set(self, key: str, value):
-        self._settings.setValue(key, value)
-        self._settings.sync()
+        if isinstance(value, bool):
+            text = "true" if value else "false"
+        else:
+            text = str(value)
+        self._config["General"][key] = text
+        self._sync()
+
+    def _sync(self):
+        with self.settings_path.open("w", encoding="utf-8") as handle:
+            self._config.write(handle)
 
     @property
     def downloads_dir(self) -> Path:
