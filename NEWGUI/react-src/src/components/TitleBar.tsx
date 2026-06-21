@@ -55,7 +55,7 @@ export function TitleBar() {
     <div
       data-tauri-drag-region
       className="titlebar drag flex h-12 shrink-0 items-center gap-[13px] border-b border-white/5 pl-4 pr-3"
-      style={{ background: "rgba(12,12,16,.72)", backdropFilter: "blur(22px)" }}
+      style={{ background: "#0c0c10" }}
     >
       <BrandMark />
       <span className="font-sora text-[13.5px] font-bold tracking-[-.2px] text-[#f4f4f6]">

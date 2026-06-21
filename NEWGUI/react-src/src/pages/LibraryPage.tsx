@@ -122,7 +122,7 @@ function Card({ item, index }: { item: LibraryItem; index: number }) {
         />
         <span
           className="relative flex h-[34px] w-[34px] items-center justify-center rounded-full border border-white/[0.16] text-white"
-          style={{ background: "rgba(0,0,0,.4)", backdropFilter: "blur(4px)" }}
+          style={{ background: "rgba(0,0,0,.62)" }}
         >
           {isMp3 ? (
             <MusicIcon size={15} strokeWidth={1.9} />

@@ -12,6 +12,33 @@ use tauri_plugin_notification::NotificationExt;
 
 struct DownloadProcess(Mutex<Option<Child>>);
 
+#[cfg(windows)]
+fn apply_rounded_region(window: &WebviewWindow) {
+    use windows::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
+
+    let Ok(hwnd) = window.hwnd() else {
+        return;
+    };
+    let Ok(size) = window.outer_size() else {
+        return;
+    };
+    let maximized = window.is_maximized().unwrap_or(false);
+    let radius = if maximized { 0 } else { 36 };
+    unsafe {
+        let region = CreateRoundRectRgn(
+            0,
+            0,
+            size.width as i32 + 1,
+            size.height as i32 + 1,
+            radius,
+            radius,
+        );
+        if !region.is_invalid() {
+            SetWindowRgn(hwnd, Some(region), true);
+        }
+    }
+}
+
 fn backend_script() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
@@ -270,6 +297,24 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .manage(DownloadProcess(Mutex::new(None)))
+        .setup(|app| {
+            #[cfg(windows)]
+            if let Some(window) = app.get_webview_window("main") {
+                apply_rounded_region(&window);
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            #[cfg(windows)]
+            if matches!(
+                event,
+                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. }
+            ) {
+                if let Some(webview) = window.app_handle().get_webview_window(window.label()) {
+                    apply_rounded_region(&webview);
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             get_app_state,
             list_library,

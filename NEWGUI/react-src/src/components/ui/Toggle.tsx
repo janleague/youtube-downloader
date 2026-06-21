@@ -11,7 +11,7 @@ export function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) =
         border: "none",
         cursor: "pointer",
         background: on ? "linear-gradient(135deg,#ff3a47,#e0001a)" : "rgba(255,255,255,0.12)",
-        transition: "background .22s",
+        transition: "background .08s",
       }}
       role="switch"
       aria-checked={on}
@@ -20,7 +20,7 @@ export function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) =
         className="absolute left-[3px] top-[3px] h-[21px] w-[21px] rounded-full bg-white"
         style={{ boxShadow: "0 1px 3px rgba(0,0,0,.4)" }}
         animate={{ x: on ? 19 : 0 }}
-        transition={{ duration: 0.24, ease: EASE }}
+        transition={{ duration: 0.08, ease: EASE }}
       />
     </button>
   );
