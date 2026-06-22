@@ -52,6 +52,15 @@ export const SearchIcon = (p: P) => (
 export const FolderIcon = (p: P) => (
   <svg {...base(p)}><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l2 2.5h7A1.5 1.5 0 0 1 19 10v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 3 17V7.5Z" /></svg>
 );
+export const EditIcon = (p: P) => (
+  <svg {...base(p)}><path d="m14.5 5.5 4 4" /><path d="M4 20h4l10.5-10.5a2.8 2.8 0 0 0-4-4L4 16v4Z" /></svg>
+);
+export const TrashIcon = (p: P) => (
+  <svg {...base(p)}><path d="M4 7h16" /><path d="M9 3h6l1 4H8l1-4Z" /><path d="m7 7 1 14h8l1-14" /><path d="M10 11v6M14 11v6" /></svg>
+);
+export const RefreshIcon = (p: P) => (
+  <svg {...base(p)}><path d="M20 7v5h-5" /><path d="M4 17v-5h5" /><path d="M6.1 8a7 7 0 0 1 11.4-2.2L20 8" /><path d="M17.9 16a7 7 0 0 1-11.4 2.2L4 16" /></svg>
+);
 export const CheckIcon = (p: P) => (
   <svg {...base(p)} strokeWidth={3}><polyline points="20 6 9 17 4 12" /></svg>
 );

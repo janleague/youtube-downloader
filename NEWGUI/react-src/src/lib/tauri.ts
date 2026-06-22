@@ -33,6 +33,7 @@ export interface LibraryItem {
   path: string;
   thumbnail?: string;
   source_url?: string;
+  modified?: number;
 }
 
 const FALLBACK_STATE: AppState = {
@@ -78,6 +79,10 @@ export const cancelDownload = () => safeInvoke<void>("cancel_download");
 export const readClipboard = () => safeInvoke<string>("read_clipboard");
 export const listLibrary = async () =>
   (await safeInvoke<LibraryItem[]>("list_library")) ?? [];
+export const editLibraryItem = (path: string, title: string) =>
+  safeInvoke<LibraryItem>("edit_library_item", { path, title });
+export const deleteLibraryItem = (path: string) =>
+  safeInvoke<void>("delete_library_item", { path });
 export const openFile = (path: string) => safeInvoke<void>("open_file", { path });
 export const openDownloadFolder = () => safeInvoke<void>("open_download_folder");
 export const pickFolder = () => safeInvoke<string | null>("pick_folder");

@@ -2,10 +2,11 @@ use std::{
     collections::HashMap,
     fs,
     io::{BufRead, BufReader, Read},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::Mutex,
     thread,
+    time::UNIX_EPOCH,
 };
 
 use serde_json::Value;
@@ -96,6 +97,336 @@ fn app_state(app: &AppHandle) -> Result<Value, String> {
     }))
 }
 
+const MEDIA_EXTENSIONS: &[&str] = &["mp3", "m4a", "mp4", "mkv", "webm"];
+const THUMBNAIL_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "avif"];
+const SIDECAR_EXTENSIONS: &[&str] = &[
+    "json", "description", "vtt", "srt", "ass", "lrc", "part", "ytdl",
+];
+
+fn downloads_dir() -> Result<PathBuf, String> {
+    let values = read_settings();
+    let root = data_root();
+    let folder = values
+        .get("downloads_dir")
+        .filter(|value| !value.trim().is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| root.join("Downloads"));
+    fs::create_dir_all(&folder)
+        .map_err(|error| format!("İndirme klasörü hazırlanamadı: {error}"))?;
+    Ok(folder)
+}
+
+fn extension(path: &Path) -> String {
+    path.extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_lowercase()
+}
+
+fn is_media(path: &Path) -> bool {
+    MEDIA_EXTENSIONS.contains(&extension(path).as_str())
+}
+
+fn metadata_path(path: &Path) -> PathBuf {
+    path.with_file_name(format!(
+        "{}.info.json",
+        path.file_stem()
+            .and_then(|value| value.to_str())
+            .unwrap_or_default()
+    ))
+}
+
+fn load_metadata(path: &Path) -> Value {
+    fs::read_to_string(metadata_path(path))
+        .ok()
+        .and_then(|contents| serde_json::from_str(&contents).ok())
+        .filter(Value::is_object)
+        .unwrap_or_else(|| serde_json::json!({}))
+}
+
+fn format_size(size: u64) -> String {
+    if size >= 1_073_741_824 {
+        format!("{:.1} GB", size as f64 / 1_073_741_824.0)
+    } else if size >= 1_048_576 {
+        format!("{:.1} MB", size as f64 / 1_048_576.0)
+    } else {
+        format!("{} KB", std::cmp::max(1, size / 1024))
+    }
+}
+
+fn format_duration(value: Option<f64>) -> String {
+    let Some(seconds) = value.map(|value| value.max(0.0).round() as u64) else {
+        return String::new();
+    };
+    let hours = seconds / 3600;
+    let minutes = (seconds % 3600) / 60;
+    let seconds = seconds % 60;
+    if hours > 0 {
+        format!("{hours}:{minutes:02}:{seconds:02}")
+    } else {
+        format!("{minutes}:{seconds:02}")
+    }
+}
+
+fn number(value: Option<&Value>) -> Option<f64> {
+    value.and_then(|value| {
+        value
+            .as_f64()
+            .or_else(|| value.as_str().and_then(|text| text.parse().ok()))
+    })
+}
+
+fn metadata_quality(metadata: &Value, format: &str) -> String {
+    if format == "MP3" {
+        return number(metadata.get("abr").or_else(|| metadata.get("tbr")))
+            .map(|value| format!("{} kbps", value.round() as u64))
+            .unwrap_or_else(|| "ses".into());
+    }
+
+    let direct = number(metadata.get("height"));
+    let requested = metadata
+        .get("requested_formats")
+        .and_then(Value::as_array)
+        .and_then(|formats| {
+            formats
+                .iter()
+                .filter_map(|item| number(item.get("height")))
+                .max_by(|left, right| left.total_cmp(right))
+        });
+    direct
+        .or(requested)
+        .map(|value| format!("{}p", value.round() as u64))
+        .unwrap_or_else(|| "video".into())
+}
+
+fn find_thumbnail(path: &Path) -> Option<PathBuf> {
+    let stem = path.file_stem()?.to_str()?;
+    fs::read_dir(path.parent()?)
+        .ok()?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .find(|candidate| {
+            candidate.is_file()
+                && candidate.file_stem().and_then(|value| value.to_str()) == Some(stem)
+                && THUMBNAIL_EXTENSIONS.contains(&extension(candidate).as_str())
+        })
+}
+
+fn describe_library_item(path: &Path) -> Result<Value, String> {
+    let info = fs::metadata(path)
+        .map_err(|error| format!("Dosya bilgisi okunamadı: {error}"))?;
+    let metadata = load_metadata(path);
+    let format = if matches!(extension(path).as_str(), "mp3" | "m4a") {
+        "MP3"
+    } else {
+        "MP4"
+    };
+    let title = metadata
+        .get("title")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(str::to_owned)
+        .unwrap_or_else(|| {
+            path.file_stem()
+                .and_then(|value| value.to_str())
+                .unwrap_or("media")
+                .to_string()
+        });
+    Ok(serde_json::json!({
+        "title": title,
+        "format": format,
+        "size": format_size(info.len()),
+        "quality": metadata_quality(&metadata, format),
+        "duration": format_duration(number(metadata.get("duration"))),
+        "path": path.to_string_lossy(),
+        "thumbnail": find_thumbnail(path).map(|value| value.to_string_lossy().into_owned()).unwrap_or_default(),
+        "source_url": metadata
+            .get("webpage_url")
+            .or_else(|| metadata.get("original_url"))
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
+        "modified": info
+            .modified()
+            .ok()
+            .and_then(|value| value.duration_since(UNIX_EPOCH).ok())
+            .map(|value| value.as_millis())
+            .unwrap_or_default(),
+    }))
+}
+
+fn scan_library_folder(folder: &Path) -> Result<Value, String> {
+    if !folder.exists() {
+        return Ok(Value::Array(Vec::new()));
+    }
+    let mut files: Vec<(PathBuf, u128)> = fs::read_dir(folder)
+        .map_err(|error| format!("Kütüphane okunamadı: {error}"))?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file() && is_media(path))
+        .map(|path| {
+            let modified = fs::metadata(&path)
+                .and_then(|info| info.modified())
+                .ok()
+                .and_then(|value| value.duration_since(UNIX_EPOCH).ok())
+                .map(|value| value.as_millis())
+                .unwrap_or_default();
+            (path, modified)
+        })
+        .collect();
+    files.sort_by(|left, right| right.1.cmp(&left.1));
+    Ok(Value::Array(
+        files
+            .iter()
+            .filter_map(|(path, _)| describe_library_item(path).ok())
+            .collect(),
+    ))
+}
+
+fn resolve_library_file(folder: &Path, raw_path: &str) -> Result<PathBuf, String> {
+    let root = folder
+        .canonicalize()
+        .map_err(|error| format!("Kütüphane yolu açılamadı: {error}"))?;
+    let path = PathBuf::from(raw_path)
+        .canonicalize()
+        .map_err(|_| "Dosya artık mevcut değil.".to_string())?;
+    if !path.starts_with(&root) || !path.is_file() || !is_media(&path) {
+        return Err("Kütüphane dışındaki dosyalara işlem yapılamaz.".into());
+    }
+    Ok(path)
+}
+
+fn associated_files(media: &Path) -> Vec<PathBuf> {
+    let mut files = vec![media.to_path_buf()];
+    let Some(parent) = media.parent() else {
+        return files;
+    };
+    let Some(stem) = media.file_stem().and_then(|value| value.to_str()) else {
+        return files;
+    };
+    let prefix = format!("{stem}.");
+    if let Ok(entries) = fs::read_dir(parent) {
+        for candidate in entries.filter_map(Result::ok).map(|entry| entry.path()) {
+            if candidate == media || !candidate.is_file() || is_media(&candidate) {
+                continue;
+            }
+            let name = candidate
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or_default();
+            let candidate_extension = extension(&candidate);
+            if name.starts_with(&prefix)
+                && (THUMBNAIL_EXTENSIONS.contains(&candidate_extension.as_str())
+                    || SIDECAR_EXTENSIONS.contains(&candidate_extension.as_str()))
+            {
+                files.push(candidate);
+            }
+        }
+    }
+    files
+}
+
+fn sanitize_file_stem(title: &str) -> String {
+    let mut value: String = title
+        .trim()
+        .chars()
+        .map(|character| {
+            if character.is_control() || r#"<>:"/\|?*"#.contains(character) {
+                '_'
+            } else {
+                character
+            }
+        })
+        .take(180)
+        .collect();
+    value = value.trim_matches([' ', '.']).to_string();
+    if value.is_empty() {
+        value = "media".into();
+    }
+    let reserved = [
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6",
+        "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6",
+        "LPT7", "LPT8", "LPT9",
+    ];
+    if reserved.contains(&value.to_uppercase().as_str()) {
+        value.insert(0, '_');
+    }
+    value
+}
+
+fn rename_library_file(folder: &Path, raw_path: &str, title: &str) -> Result<Value, String> {
+    let media = resolve_library_file(folder, raw_path)?;
+    let title = title.trim();
+    if title.is_empty() {
+        return Err("Dosya adı boş bırakılamaz.".into());
+    }
+    let new_stem = sanitize_file_stem(title);
+    let old_stem = media
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "Dosya adı okunamadı.".to_string())?;
+    let parent = media
+        .parent()
+        .ok_or_else(|| "Dosya klasörü bulunamadı.".to_string())?;
+    let sources = associated_files(&media);
+    let mut moves = Vec::new();
+    for source in sources {
+        let name = source
+            .file_name()
+            .and_then(|value| value.to_str())
+            .ok_or_else(|| "Yan dosya adı okunamadı.".to_string())?;
+        let target_name = if source == media {
+            format!("{new_stem}.{}", extension(&source))
+        } else {
+            name.replacen(old_stem, &new_stem, 1)
+        };
+        let target = parent.join(target_name);
+        if target != source && target.exists() {
+            return Err("Bu adla başka bir dosya zaten mevcut.".into());
+        }
+        moves.push((source, target));
+    }
+
+    let mut completed = Vec::new();
+    for (source, target) in &moves {
+        if source == target {
+            continue;
+        }
+        if let Err(error) = fs::rename(source, target) {
+            for (old, new) in completed.iter().rev() {
+                let _ = fs::rename(new, old);
+            }
+            return Err(format!("Dosya yeniden adlandırılamadı: {error}"));
+        }
+        completed.push((source.clone(), target.clone()));
+    }
+
+    let renamed_media = parent.join(format!("{new_stem}.{}", extension(&media)));
+    let info_path = metadata_path(&renamed_media);
+    let mut metadata = fs::read_to_string(&info_path)
+        .ok()
+        .and_then(|contents| serde_json::from_str::<Value>(&contents).ok())
+        .filter(Value::is_object)
+        .unwrap_or_else(|| serde_json::json!({}));
+    metadata["title"] = Value::String(title.to_string());
+    let encoded = serde_json::to_string_pretty(&metadata)
+        .map_err(|error| format!("Metadata hazırlanamadı: {error}"))?;
+    fs::write(info_path, encoded)
+        .map_err(|error| format!("Başlık kaydedilemedi: {error}"))?;
+    describe_library_item(&renamed_media)
+}
+
+fn delete_library_file(folder: &Path, raw_path: &str) -> Result<(), String> {
+    let media = resolve_library_file(folder, raw_path)?;
+    for path in associated_files(&media) {
+        match fs::remove_file(&path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(format!("Dosya silinemedi: {error}")),
+        }
+    }
+    Ok(())
+}
+
 fn backend_script() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
@@ -180,8 +511,27 @@ fn get_app_state(app: AppHandle) -> Result<Value, String> {
 }
 
 #[tauri::command]
-fn list_library(app: AppHandle) -> Result<Value, String> {
-    run_backend_json(&app, &["library"])
+async fn list_library() -> Result<Value, String> {
+    let folder = downloads_dir()?;
+    tauri::async_runtime::spawn_blocking(move || scan_library_folder(&folder))
+        .await
+        .map_err(|error| format!("Kütüphane görevi tamamlanamadı: {error}"))?
+}
+
+#[tauri::command]
+async fn edit_library_item(path: String, title: String) -> Result<Value, String> {
+    let folder = downloads_dir()?;
+    tauri::async_runtime::spawn_blocking(move || rename_library_file(&folder, &path, &title))
+        .await
+        .map_err(|error| format!("Düzenleme görevi tamamlanamadı: {error}"))?
+}
+
+#[tauri::command]
+async fn delete_library_item(path: String) -> Result<(), String> {
+    let folder = downloads_dir()?;
+    tauri::async_runtime::spawn_blocking(move || delete_library_file(&folder, &path))
+        .await
+        .map_err(|error| format!("Silme görevi tamamlanamadı: {error}"))?
 }
 
 #[tauri::command]
@@ -375,6 +725,70 @@ fn show_notification(app: AppHandle, title: String, body: String) -> Result<(), 
         .map_err(|error| error.to_string())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn test_folder(label: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "youtube-downloader-{label}-{}-{unique}",
+            std::process::id()
+        ))
+    }
+
+    #[test]
+    fn library_edit_and_delete_move_all_sidecars() {
+        let folder = test_folder("library-edit");
+        fs::create_dir_all(&folder).unwrap();
+        let media = folder.join("Old title.mp3");
+        let metadata = folder.join("Old title.info.json");
+        let thumbnail = folder.join("Old title.webp");
+        fs::write(&media, b"audio").unwrap();
+        fs::write(
+            &metadata,
+            r#"{"title":"Old title","duration":61,"abr":320}"#,
+        )
+        .unwrap();
+        fs::write(&thumbnail, b"cover").unwrap();
+
+        let items = scan_library_folder(&folder).unwrap();
+        assert_eq!(items.as_array().unwrap().len(), 1);
+
+        let updated =
+            rename_library_file(&folder, media.to_str().unwrap(), "New / title").unwrap();
+        let updated_path = PathBuf::from(updated["path"].as_str().unwrap());
+        assert_eq!(updated["title"], "New / title");
+        assert!(updated_path.ends_with("New _ title.mp3"));
+        assert!(folder.join("New _ title.info.json").is_file());
+        assert!(folder.join("New _ title.webp").is_file());
+
+        delete_library_file(&folder, updated_path.to_str().unwrap()).unwrap();
+        assert!(fs::read_dir(&folder).unwrap().next().is_none());
+        fs::remove_dir_all(folder).unwrap();
+    }
+
+    #[test]
+    fn library_rejects_files_outside_download_folder() {
+        let folder = test_folder("library-root");
+        let outside = test_folder("library-outside");
+        fs::create_dir_all(&folder).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        let media = outside.join("outside.mp3");
+        fs::write(&media, b"audio").unwrap();
+
+        let error = delete_library_file(&folder, media.to_str().unwrap()).unwrap_err();
+        assert!(error.contains("Kütüphane dışındaki"));
+
+        fs::remove_dir_all(folder).unwrap();
+        fs::remove_dir_all(outside).unwrap();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -392,6 +806,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_app_state,
             list_library,
+            edit_library_item,
+            delete_library_item,
             set_setting,
             pick_folder,
             read_clipboard,

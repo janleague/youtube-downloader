@@ -21,7 +21,9 @@ function Shell() {
   const [page, setPage] = useState<Page>("download");
   // Ziyaret edilen sayfaları monte tutuyoruz: geçişler unmount/mount yerine
   // sadece görünürlük değişimine dönüşür → gecikme ortadan kalkar.
-  const [visited, setVisited] = useState<Page[]>(["download"]);
+  // Kütüphane arka planda önceden hazırlanır; ilk sekme tıklamasında
+  // tarama veya mount maliyeti oluşmaz.
+  const [visited, setVisited] = useState<Page[]>(["download", "library"]);
 
   const navigate = (next: Page) => {
     setVisited((current) =>

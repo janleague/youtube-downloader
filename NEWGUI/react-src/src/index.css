@@ -86,6 +86,23 @@ input::placeholder {
   color: #5c5c64;
 }
 
+.library-card {
+  content-visibility: auto;
+  contain: layout paint style;
+  contain-intrinsic-size: 0 168px;
+}
+
+.library-spin {
+  display: flex;
+  animation: library-spin 0.75s linear infinite;
+}
+
+@keyframes library-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Sayfalar monte kalır; aktif olmayan sadece gizlenir (unmount yok).
    Geçiş, yeniden mount değil, ucuz bir görünürlük değişimi olur. */
 .page-pane {

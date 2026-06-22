@@ -1,6 +1,6 @@
 [package]
 name = "youtube-downloader"
-version = "2.2.2"
+version = "2.2.3"
 description = "YouTube video ve ses indirici"
 authors = ["janleague"]
 edition = "2021"
