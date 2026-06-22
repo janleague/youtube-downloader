@@ -1,4 +1,6 @@
 use std::{
+    collections::HashMap,
+    fs,
     io::{BufRead, BufReader, Read},
     path::PathBuf,
     process::{Child, Command, Stdio},
@@ -12,31 +14,86 @@ use tauri_plugin_notification::NotificationExt;
 
 struct DownloadProcess(Mutex<Option<Child>>);
 
-#[cfg(windows)]
-fn apply_rounded_region(window: &WebviewWindow) {
-    use windows::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
+fn data_root() -> PathBuf {
+    std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("USERPROFILE").map(PathBuf::from))
+        .unwrap_or_else(std::env::temp_dir)
+        .join("janleague")
+        .join("YouTubeDownloader")
+}
 
-    let Ok(hwnd) = window.hwnd() else {
-        return;
+fn read_settings() -> HashMap<String, String> {
+    let Ok(contents) = fs::read_to_string(data_root().join("settings.ini")) else {
+        return HashMap::new();
     };
-    let Ok(size) = window.outer_size() else {
-        return;
-    };
-    let maximized = window.is_maximized().unwrap_or(false);
-    let radius = if maximized { 0 } else { 36 };
-    unsafe {
-        let region = CreateRoundRectRgn(
-            0,
-            0,
-            size.width as i32 + 1,
-            size.height as i32 + 1,
-            radius,
-            radius,
-        );
-        if !region.is_invalid() {
-            SetWindowRgn(hwnd, Some(region), true);
+    let mut values = HashMap::new();
+    let mut in_general = false;
+    for raw_line in contents.lines() {
+        let line = raw_line.trim();
+        if line.starts_with('[') && line.ends_with(']') {
+            in_general = line.eq_ignore_ascii_case("[General]");
+        } else if in_general && !line.is_empty() && !line.starts_with(['#', ';']) {
+            if let Some((key, value)) = line.split_once('=') {
+                values.insert(key.trim().to_lowercase(), value.trim().to_string());
+            }
         }
     }
+    values
+}
+
+fn setting_bool(values: &HashMap<String, String>, key: &str, default: bool) -> bool {
+    values
+        .get(key)
+        .map(|value| matches!(value.to_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+        .unwrap_or(default)
+}
+
+fn ffmpeg_available(app: &AppHandle) -> bool {
+    let mut candidates = Vec::new();
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        candidates.push(
+            resource_dir
+                .join("binaries")
+                .join("backend")
+                .join("_internal")
+                .join("ffmpeg.exe"),
+        );
+    }
+    candidates.push(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("binaries")
+            .join("backend")
+            .join("_internal")
+            .join("ffmpeg.exe"),
+    );
+    candidates.into_iter().any(|path| path.is_file())
+}
+
+fn app_state(app: &AppHandle) -> Result<Value, String> {
+    let values = read_settings();
+    let root = data_root();
+    let default_downloads = root.join("Downloads");
+    let downloads_dir = values
+        .get("downloads_dir")
+        .filter(|value| !value.trim().is_empty())
+        .map(PathBuf::from)
+        .unwrap_or(default_downloads);
+    fs::create_dir_all(&downloads_dir)
+        .map_err(|error| format!("İndirme klasörü hazırlanamadı: {error}"))?;
+
+    Ok(serde_json::json!({
+        "settings": {
+            "downloadsDir": downloads_dir.to_string_lossy(),
+            "defaultFormat": values.get("default_format").map(|value| value.to_lowercase()).unwrap_or_else(|| "mp3".into()),
+            "resolution": values.get("resolution").cloned().unwrap_or_else(|| "1080p".into()),
+            "audioQuality": values.get("audio_quality").cloned().unwrap_or_else(|| "320".into()),
+            "language": values.get("language").cloned().unwrap_or_else(|| "tr".into()),
+            "notifications": setting_bool(&values, "notifications", true),
+            "darkTheme": setting_bool(&values, "dark_theme", true),
+        },
+        "ffmpegOk": ffmpeg_available(app),
+    }))
 }
 
 fn backend_script() -> PathBuf {
@@ -55,12 +112,38 @@ fn hidden_command(program: &str) -> Command {
     command
 }
 
-fn backend_command() -> Result<Command, String> {
+fn configure_backend_command(program: &std::path::Path) -> Command {
+    let mut command = hidden_command(program.to_string_lossy().as_ref());
+    command
+        .env("PYTHONIOENCODING", "utf-8")
+        .env("PYTHONUTF8", "1");
+    command
+}
+
+fn backend_command(app: &AppHandle) -> Result<Command, String> {
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let bundled = resource_dir
+            .join("binaries")
+            .join("backend")
+            .join("youtube-downloader-backend.exe");
+        if bundled.exists() {
+            return Ok(configure_backend_command(&bundled));
+        }
+    }
+
+    let development_bundle = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("binaries")
+        .join("backend")
+        .join("youtube-downloader-backend.exe");
+    if development_bundle.exists() {
+        return Ok(configure_backend_command(&development_bundle));
+    }
+
     if let Ok(exe) = std::env::current_exe() {
         if let Some(parent) = exe.parent() {
             let bundled = parent.join("youtube-downloader-backend.exe");
             if bundled.exists() {
-                return Ok(hidden_command(bundled.to_string_lossy().as_ref()));
+                return Ok(configure_backend_command(&bundled));
             }
         }
     }
@@ -78,8 +161,8 @@ fn backend_command() -> Result<Command, String> {
     Ok(command)
 }
 
-fn run_backend_json(args: &[&str]) -> Result<Value, String> {
-    let output = backend_command()?
+fn run_backend_json(app: &AppHandle, args: &[&str]) -> Result<Value, String> {
+    let output = backend_command(app)?
         .args(args)
         .stdin(Stdio::null())
         .output()
@@ -92,29 +175,29 @@ fn run_backend_json(args: &[&str]) -> Result<Value, String> {
 }
 
 #[tauri::command]
-fn get_app_state() -> Result<Value, String> {
-    run_backend_json(&["state"])
+fn get_app_state(app: AppHandle) -> Result<Value, String> {
+    app_state(&app)
 }
 
 #[tauri::command]
-fn list_library() -> Result<Value, String> {
-    run_backend_json(&["library"])
+fn list_library(app: AppHandle) -> Result<Value, String> {
+    run_backend_json(&app, &["library"])
 }
 
 #[tauri::command]
-fn set_setting(key: String, value: Value) -> Result<Value, String> {
+fn set_setting(app: AppHandle, key: String, value: Value) -> Result<Value, String> {
     let value = serde_json::to_string(&value).map_err(|error| error.to_string())?;
-    run_backend_json(&["set", &key, &value])
+    run_backend_json(&app, &["set", &key, &value])
 }
 
 #[tauri::command]
-fn pick_folder() -> Result<Option<String>, String> {
+fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
     let Some(folder) = rfd::FileDialog::new().pick_folder() else {
         return Ok(None);
     };
     let folder = folder.to_string_lossy().to_string();
     let value = serde_json::to_string(&folder).map_err(|error| error.to_string())?;
-    run_backend_json(&["set", "downloads_dir", &value])?;
+    run_backend_json(&app, &["set", "downloads_dir", &value])?;
     Ok(Some(folder))
 }
 
@@ -131,8 +214,8 @@ fn open_file(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn open_download_folder() -> Result<(), String> {
-    let state = run_backend_json(&["state"])?;
+fn open_download_folder(app: AppHandle) -> Result<(), String> {
+    let state = app_state(&app)?;
     let path = state["settings"]["downloadsDir"]
         .as_str()
         .ok_or_else(|| "İndirme klasörü bulunamadı.".to_string())?;
@@ -159,7 +242,7 @@ fn download_video(
         return Err("Bir indirme zaten devam ediyor.".into());
     }
 
-    let mut command = backend_command()?;
+    let mut command = backend_command(&app)?;
     command
         .arg("download")
         .arg(url)
@@ -297,21 +380,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .manage(DownloadProcess(Mutex::new(None)))
-        .setup(|app| {
-            #[cfg(windows)]
-            if let Some(window) = app.get_webview_window("main") {
-                apply_rounded_region(&window);
-            }
-            Ok(())
-        })
         .on_window_event(|window, event| {
-            #[cfg(windows)]
-            if matches!(
-                event,
-                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. }
-            ) {
-                if let Some(webview) = window.app_handle().get_webview_window(window.label()) {
-                    apply_rounded_region(&webview);
+            // Köşe yuvarlama artık CSS ile yapılıyor; pencere büyütüldüğünde
+            // yuvarlaklığı kapatmak için arayüze maksimize durumunu bildir.
+            if let tauri::WindowEvent::Resized(_) = event {
+                if let Ok(maximized) = window.is_maximized() {
+                    let _ = window.emit("window://maximized", maximized);
                 }
             }
         })

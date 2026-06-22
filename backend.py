@@ -17,13 +17,13 @@ APP_DIR = Path(__file__).resolve().parent
 
 def emit(event: str, payload=None):
     print(
-        json.dumps({"event": event, "payload": payload}, ensure_ascii=False),
+        json.dumps({"event": event, "payload": payload}, ensure_ascii=True),
         flush=True,
     )
 
 
 def output(payload):
-    print(json.dumps(payload, ensure_ascii=False), flush=True)
+    print(json.dumps(payload, ensure_ascii=True), flush=True)
 
 
 def store() -> SettingsStore:
@@ -115,6 +115,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
     try:
         args = build_parser().parse_args()
         args.handler(args)

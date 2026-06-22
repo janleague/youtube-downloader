@@ -8,8 +8,6 @@ import sys
 from pathlib import Path
 from typing import Callable
 
-import yt_dlp
-
 
 ProgressCallback = Callable[[float, str, str], None]
 StatusCallback = Callable[[str, str], None]
@@ -210,6 +208,8 @@ class DownloadManager:
         return options
 
     def _execute(self, url: str, options: dict, output_ext: str):
+        import yt_dlp
+
         try:
             if self.on_status:
                 self.on_status("Video bilgileri alınıyor...", "info")

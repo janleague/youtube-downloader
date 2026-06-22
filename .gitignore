@@ -12,6 +12,7 @@ node_modules/
 NEWGUI/react-src/dist/
 NEWGUI/react-src/src-tauri/target/
 NEWGUI/react-src/src-tauri/binaries/*.exe
+NEWGUI/react-src/src-tauri/binaries/backend/
 .backend-build/
 .backend-spec/
 .backend-assets/
