@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Callable
 
@@ -188,7 +189,9 @@ class DownloadManager:
 
     def _common_options(self) -> dict:
         options = {
-            "outtmpl": str(self.downloads_dir / "%(title)s.%(ext)s"),
+            "outtmpl": str(
+                self.downloads_dir / "%(title)s" / "%(title)s.%(ext)s"
+            ),
             "progress_hooks": [self._progress_hook],
             "writeinfojson": True,
             "writethumbnail": True,
@@ -213,6 +216,7 @@ class DownloadManager:
         try:
             if self.on_status:
                 self.on_status("Video bilgileri alınıyor...", "info")
+            started_at = time.time()
             with yt_dlp.YoutubeDL(options) as ydl:
                 info = ydl.extract_info(url, download=True)
                 if not info:
@@ -220,12 +224,16 @@ class DownloadManager:
                 title = info.get("title") or "video"
 
             matches = sorted(
-                self.downloads_dir.glob(f"*.{output_ext}"),
+                self.downloads_dir.rglob(f"*.{output_ext}"),
                 key=lambda p: p.stat().st_mtime,
                 reverse=True,
             )
-            filepath = str(matches[0]) if matches else str(
-                self.downloads_dir / f"{title}.{output_ext}"
+            recent = [
+                path for path in matches
+                if path.stat().st_mtime >= started_at - 2
+            ]
+            filepath = str((recent or matches)[0]) if matches else str(
+                self.downloads_dir / title / f"{title}.{output_ext}"
             )
             if self.on_complete:
                 self.on_complete(filepath, title)

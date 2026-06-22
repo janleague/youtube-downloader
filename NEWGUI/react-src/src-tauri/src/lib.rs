@@ -258,11 +258,28 @@ fn scan_library_folder(folder: &Path) -> Result<Value, String> {
     if !folder.exists() {
         return Ok(Value::Array(Vec::new()));
     }
-    let mut files: Vec<(PathBuf, u128)> = fs::read_dir(folder)
+    let entries: Vec<PathBuf> = fs::read_dir(folder)
         .map_err(|error| format!("Kütüphane okunamadı: {error}"))?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
-        .filter(|path| path.is_file() && is_media(path))
+        .collect();
+    let mut media_paths = Vec::new();
+    for path in entries {
+        if path.is_file() && is_media(&path) {
+            media_paths.push(path);
+        } else if path.is_dir() {
+            media_paths.extend(
+                fs::read_dir(path)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Result::ok)
+                    .map(|entry| entry.path())
+                    .filter(|candidate| candidate.is_file() && is_media(candidate)),
+            );
+        }
+    }
+    let mut files: Vec<(PathBuf, u128)> = media_paths
+        .into_iter()
         .map(|path| {
             let modified = fs::metadata(&path)
                 .and_then(|info| info.modified())
@@ -367,6 +384,91 @@ fn rename_library_file(folder: &Path, raw_path: &str, title: &str) -> Result<Val
     let parent = media
         .parent()
         .ok_or_else(|| "Dosya klasörü bulunamadı.".to_string())?;
+    let root = folder
+        .canonicalize()
+        .map_err(|error| format!("Kütüphane yolu açılamadı: {error}"))?;
+    let parent_canonical = parent
+        .canonicalize()
+        .map_err(|error| format!("Medya klasörü açılamadı: {error}"))?;
+    let managed_folder = parent_canonical.parent() == Some(root.as_path());
+
+    if managed_folder {
+        let target_folder = root.join(&new_stem);
+        if target_folder != parent_canonical && target_folder.exists() {
+            return Err("Bu adla başka bir medya klasörü zaten mevcut.".into());
+        }
+
+        let mut moves = Vec::new();
+        for source in fs::read_dir(&parent_canonical)
+            .map_err(|error| format!("Medya klasörü okunamadı: {error}"))?
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.is_file())
+        {
+            let name = source
+                .file_name()
+                .and_then(|value| value.to_str())
+                .ok_or_else(|| "Dosya adı okunamadı.".to_string())?;
+            if !name.starts_with(old_stem) {
+                continue;
+            }
+            moves.push((
+                source.clone(),
+                parent_canonical.join(name.replacen(old_stem, &new_stem, 1)),
+            ));
+        }
+
+        for (source, target) in &moves {
+            if source != target && target.exists() {
+                return Err("Bu adla başka bir dosya zaten mevcut.".into());
+            }
+        }
+
+        let mut completed = Vec::new();
+        for (source, target) in &moves {
+            if source == target {
+                continue;
+            }
+            if let Err(error) = fs::rename(source, target) {
+                for (old, new) in completed.iter().rev() {
+                    let _ = fs::rename(new, old);
+                }
+                return Err(format!("Dosya yeniden adlandırılamadı: {error}"));
+            }
+            completed.push((source.clone(), target.clone()));
+        }
+
+        if target_folder != parent_canonical {
+            if let Err(error) = fs::rename(&parent_canonical, &target_folder) {
+                for (old, new) in completed.iter().rev() {
+                    let _ = fs::rename(new, old);
+                }
+                return Err(format!("Medya klasörü yeniden adlandırılamadı: {error}"));
+            }
+        }
+
+        for info_path in fs::read_dir(&target_folder)
+            .into_iter()
+            .flatten()
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.file_name().and_then(|value| value.to_str()).is_some_and(|name| name.ends_with(".info.json")))
+        {
+            if let Ok(contents) = fs::read_to_string(&info_path) {
+                if let Ok(mut metadata) = serde_json::from_str::<Value>(&contents) {
+                    metadata["title"] = Value::String(title.to_string());
+                    if let Ok(encoded) = serde_json::to_string_pretty(&metadata) {
+                        let _ = fs::write(info_path, encoded);
+                    }
+                }
+            }
+        }
+
+        let renamed_media =
+            target_folder.join(format!("{new_stem}.{}", extension(&media)));
+        return describe_library_item(&renamed_media);
+    }
+
     let sources = associated_files(&media);
     let mut moves = Vec::new();
     for source in sources {
@@ -417,6 +519,17 @@ fn rename_library_file(folder: &Path, raw_path: &str, title: &str) -> Result<Val
 
 fn delete_library_file(folder: &Path, raw_path: &str) -> Result<(), String> {
     let media = resolve_library_file(folder, raw_path)?;
+    let root = folder
+        .canonicalize()
+        .map_err(|error| format!("Kütüphane yolu açılamadı: {error}"))?;
+    let parent = media
+        .parent()
+        .and_then(|path| path.canonicalize().ok())
+        .ok_or_else(|| "Medya klasörü bulunamadı.".to_string())?;
+    if parent.parent() == Some(root.as_path()) {
+        return fs::remove_dir_all(parent)
+            .map_err(|error| format!("Medya klasörü silinemedi: {error}"));
+    }
     for path in associated_files(&media) {
         match fs::remove_file(&path) {
             Ok(()) => {}
@@ -744,11 +857,14 @@ mod tests {
     #[test]
     fn library_edit_and_delete_move_all_sidecars() {
         let folder = test_folder("library-edit");
-        fs::create_dir_all(&folder).unwrap();
-        let media = folder.join("Old title.mp3");
-        let metadata = folder.join("Old title.info.json");
-        let thumbnail = folder.join("Old title.webp");
+        let media_folder = folder.join("Old title");
+        fs::create_dir_all(&media_folder).unwrap();
+        let media = media_folder.join("Old title.mp3");
+        let video = media_folder.join("Old title.mp4");
+        let metadata = media_folder.join("Old title.info.json");
+        let thumbnail = media_folder.join("Old title.webp");
         fs::write(&media, b"audio").unwrap();
+        fs::write(&video, b"video").unwrap();
         fs::write(
             &metadata,
             r#"{"title":"Old title","duration":61,"abr":320}"#,
@@ -757,15 +873,16 @@ mod tests {
         fs::write(&thumbnail, b"cover").unwrap();
 
         let items = scan_library_folder(&folder).unwrap();
-        assert_eq!(items.as_array().unwrap().len(), 1);
+        assert_eq!(items.as_array().unwrap().len(), 2);
 
         let updated =
             rename_library_file(&folder, media.to_str().unwrap(), "New / title").unwrap();
         let updated_path = PathBuf::from(updated["path"].as_str().unwrap());
         assert_eq!(updated["title"], "New / title");
-        assert!(updated_path.ends_with("New _ title.mp3"));
-        assert!(folder.join("New _ title.info.json").is_file());
-        assert!(folder.join("New _ title.webp").is_file());
+        assert!(updated_path.ends_with("New _ title\\New _ title.mp3"));
+        assert!(folder.join("New _ title").join("New _ title.mp4").is_file());
+        assert!(folder.join("New _ title").join("New _ title.info.json").is_file());
+        assert!(folder.join("New _ title").join("New _ title.webp").is_file());
 
         delete_library_file(&folder, updated_path.to_str().unwrap()).unwrap();
         assert!(fs::read_dir(&folder).unwrap().next().is_none());

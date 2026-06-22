@@ -62,7 +62,7 @@ export function TitleBar() {
         {tr("appName")}
       </span>
       <span className="rounded-[6px] border border-white/[0.06] bg-white/[0.04] px-[7px] py-[2px] text-[10.5px] font-semibold text-[#6a6a72]">
-        v2.2.3
+        v2.2.4
       </span>
       <div className="flex-1" data-tauri-drag-region />
       <WinButton onClick={() => void windowMinimize()}>

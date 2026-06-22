@@ -66,6 +66,7 @@ class LibraryTests(unittest.TestCase):
             options = manager._common_options()
             self.assertTrue(options["writeinfojson"])
             self.assertTrue(options["writethumbnail"])
+            self.assertIn("%(title)s", Path(options["outtmpl"]).parent.name)
 
     def test_bundled_ffmpeg_is_used_in_frozen_build(self):
         with tempfile.TemporaryDirectory() as directory:
