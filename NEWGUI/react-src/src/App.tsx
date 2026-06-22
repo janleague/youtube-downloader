@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { isTauri } from "./lib/tauri";
 import { TitleBar } from "./components/TitleBar";
 import { Sidebar, type Page } from "./components/Sidebar";
 import { DownloadPage } from "./pages/DownloadPage";
@@ -8,7 +10,7 @@ import { AboutPage } from "./pages/AboutPage";
 import { AppProvider } from "./lib/AppContext";
 import { DownloadProvider } from "./lib/useDownload";
 
-function ActivePage({ page }: { page: Page }) {
+function PageView({ page }: { page: Page }) {
   if (page === "library") return <LibraryPage />;
   if (page === "settings") return <SettingsPage />;
   if (page === "about") return <AboutPage />;
@@ -17,6 +19,28 @@ function ActivePage({ page }: { page: Page }) {
 
 function Shell() {
   const [page, setPage] = useState<Page>("download");
+  // Ziyaret edilen sayfaları monte tutuyoruz: geçişler unmount/mount yerine
+  // sadece görünürlük değişimine dönüşür → gecikme ortadan kalkar.
+  const [visited, setVisited] = useState<Page[]>(["download"]);
+
+  const navigate = (next: Page) => {
+    setVisited((current) =>
+      current.includes(next) ? current : [...current, next],
+    );
+    setPage(next);
+  };
+
+  // Pencere büyütüldüğünde köşe yuvarlamayı kapat (backend'ten gelen olay).
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unlisten = listen<boolean>("window://maximized", ({ payload }) => {
+      document.documentElement.classList.toggle("maximized", payload);
+    });
+    return () => {
+      void unlisten.then((off) => off());
+    };
+  }, []);
+
   return (
     <div className="app-stage h-full w-full bg-ink-850">
       <div
@@ -24,7 +48,7 @@ function Shell() {
       >
         <TitleBar />
         <div className="flex min-h-0 flex-1">
-          <Sidebar page={page} onNavigate={setPage} />
+          <Sidebar page={page} onNavigate={navigate} />
           <main className="app-content relative flex min-w-0 flex-1 flex-col bg-ink-900">
             <div
               className="pointer-events-none absolute -right-[60px] -top-[80px] h-[280px] w-[380px]"
@@ -34,9 +58,14 @@ function Shell() {
               }}
             />
             <div className="relative z-10 min-h-0 flex-1 overflow-y-auto p-[34px_40px_44px]">
-              <div key={page} className="page-enter">
-                <ActivePage page={page} />
-              </div>
+              {visited.map((p) => (
+                <div
+                  key={p}
+                  className={`page-pane${p === page ? " active" : ""}`}
+                >
+                  <PageView page={p} />
+                </div>
+              ))}
             </div>
           </main>
         </div>

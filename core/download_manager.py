@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import sys
 from pathlib import Path
 from typing import Callable
 
@@ -69,8 +70,24 @@ class DownloadManager:
         self.downloads_dir = path
 
     @staticmethod
-    def check_ffmpeg() -> bool:
-        return shutil.which("ffmpeg") is not None
+    def _find_ffmpeg() -> Path | None:
+        bundled_root = getattr(sys, "_MEIPASS", None)
+        candidates = []
+        if bundled_root:
+            candidates.append(Path(bundled_root) / "ffmpeg.exe")
+        if getattr(sys, "frozen", False):
+            candidates.append(Path(sys.executable).resolve().parent / "ffmpeg.exe")
+
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate
+
+        system_ffmpeg = shutil.which("ffmpeg")
+        return Path(system_ffmpeg) if system_ffmpeg else None
+
+    @classmethod
+    def check_ffmpeg(cls) -> bool:
+        return cls._find_ffmpeg() is not None
 
     @staticmethod
     def is_valid_url(url: str) -> bool:
@@ -172,7 +189,7 @@ class DownloadManager:
         self._execute(url, options, "mp4")
 
     def _common_options(self) -> dict:
-        return {
+        options = {
             "outtmpl": str(self.downloads_dir / "%(title)s.%(ext)s"),
             "progress_hooks": [self._progress_hook],
             "writeinfojson": True,
@@ -187,6 +204,10 @@ class DownloadManager:
             "fragment_retries": 5,
             "windowsfilenames": True,
         }
+        ffmpeg_path = self._find_ffmpeg()
+        if ffmpeg_path:
+            options["ffmpeg_location"] = str(ffmpeg_path)
+        return options
 
     def _execute(self, url: str, options: dict, output_ext: str):
         try:

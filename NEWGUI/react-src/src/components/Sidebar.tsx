@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import {
   DownloadIcon,
   LibraryIcon,
@@ -7,7 +6,6 @@ import {
   GithubIcon,
 } from "./icons";
 import { openUrl } from "../lib/tauri";
-import { EASE } from "../lib/motion";
 import { useApp } from "../lib/AppContext";
 import type { MessageKey } from "../lib/i18n";
 
@@ -28,13 +26,29 @@ export function Sidebar({
   onNavigate: (page: Page) => void;
 }) {
   const { ffmpegOk, tr } = useApp();
+  const activeIndex = NAV.findIndex(({ id }) => id === page);
   return (
     <aside className="sidebar flex w-[244px] shrink-0 flex-col border-r border-white/5 bg-[rgba(9,9,12,0.5)] p-[18px_14px_16px]">
       <div className="mb-[14px] px-2 text-[10.5px] font-bold tracking-[1.6px] text-[#4d4d55]">
         {tr("menu")}
       </div>
 
-      <nav className="flex flex-col gap-1">
+      <nav className="relative flex flex-col gap-1">
+        {/* Aktif gösterge: layout ölçümü yapan framer-motion yerine saf CSS
+            transform — her geçişte reflow yok, sadece GPU kayması. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-[-14px] w-[3px] rounded-r-[4px]"
+          style={{
+            top: 12,
+            height: 20,
+            background: "linear-gradient(#ff5a68,#ff2740)",
+            boxShadow: "0 0 12px rgba(255,40,60,.8)",
+            transform: `translateY(${activeIndex * 48}px)`,
+            opacity: activeIndex < 0 ? 0 : 1,
+            transition: "transform .22s cubic-bezier(.4,0,.2,1)",
+          }}
+        />
         {NAV.map(({ id, label, Icon }) => {
           const active = page === id;
           return (
@@ -54,17 +68,6 @@ export function Sidebar({
                   "background .2s cubic-bezier(.4,0,.2,1), color .2s, box-shadow .2s",
               }}
             >
-              {active && (
-                <motion.span
-                  layoutId="nav-indicator"
-                  transition={{ duration: 0.2, ease: EASE }}
-                  className="absolute bottom-3 left-[-14px] top-3 w-[3px] rounded-r-[4px]"
-                  style={{
-                    background: "linear-gradient(#ff5a68,#ff2740)",
-                    boxShadow: "0 0 12px rgba(255,40,60,.8)",
-                  }}
-                />
-              )}
               <Icon size={18} />
               {tr(label)}
             </button>

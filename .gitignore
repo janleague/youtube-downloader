@@ -14,6 +14,7 @@ NEWGUI/react-src/src-tauri/target/
 NEWGUI/react-src/src-tauri/binaries/*.exe
 .backend-build/
 .backend-spec/
+.backend-assets/
 .release-backend-build/
 .release-backend-spec/
 

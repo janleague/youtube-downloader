@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from core.download_manager import DownloadManager
 from core.library_service import scan_library
@@ -64,6 +66,15 @@ class LibraryTests(unittest.TestCase):
             options = manager._common_options()
             self.assertTrue(options["writeinfojson"])
             self.assertTrue(options["writethumbnail"])
+
+    def test_bundled_ffmpeg_is_used_in_frozen_build(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ffmpeg = Path(directory) / "ffmpeg.exe"
+            ffmpeg.write_bytes(b"bundled")
+            with patch.object(sys, "_MEIPASS", directory, create=True):
+                manager = DownloadManager(Path(directory) / "Downloads")
+                self.assertEqual(manager._find_ffmpeg(), ffmpeg)
+                self.assertEqual(manager._common_options()["ffmpeg_location"], str(ffmpeg))
 
 
 if __name__ == "__main__":

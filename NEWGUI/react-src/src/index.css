@@ -6,7 +6,7 @@
 
 :root {
   color-scheme: dark;
-  background: #0a0a0d;
+  background: transparent;
 }
 
 html,
@@ -18,11 +18,27 @@ body,
 
 body {
   font-family: "Manrope", system-ui, sans-serif;
-  background: #0a0a0d;
+  /* Pencere şeffaf; gövde rengini .app-stage taşıyor, böylece
+     yuvarlatılmış köşelerin dışı şeffaf kalıp pürüzsüz görünür. */
+  background: transparent;
   color: #f4f4f6;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
+}
+
+/* Pencere köşeleri: tarayıcı tarafından anti-aliased yuvarlanır
+   (GDI bölge kırpması yerine) — pürüzsüz, "smooth oval" kenarlar. */
+.app-stage {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Tam ekran/büyütülmüş durumda köşeler düz olmalı. */
+.maximized .app-stage {
+  border-radius: 0;
+  box-shadow: none;
 }
 
 input {
@@ -70,8 +86,15 @@ input::placeholder {
   color: #5c5c64;
 }
 
-.page-enter {
-  animation: page-in 90ms ease-out;
+/* Sayfalar monte kalır; aktif olmayan sadece gizlenir (unmount yok).
+   Geçiş, yeniden mount değil, ucuz bir görünürlük değişimi olur. */
+.page-pane {
+  display: none;
+}
+
+.page-pane.active {
+  display: block;
+  animation: page-in 110ms ease-out;
 }
 
 @keyframes page-in {
