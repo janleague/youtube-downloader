@@ -20,6 +20,15 @@ class DownloadManager:
     RESOLUTIONS = [
         "2160p", "1440p", "1080p", "720p", "480p", "360p", "En İyi",
     ]
+    _MAX_TRANSIENT_RETRIES = 2
+    _TRANSIENT_YOUTUBE_ERROR_KEYWORDS = (
+        "sign in to confirm",
+        "confirm you're not a bot",
+        "confirm you are not a bot",
+        "http error 403",
+        "precondition check failed",
+        "unable to download api page",
+    )
 
     _ERROR_MAP = [
         ("Private video", "Bu video özel. Erişim izniniz yok."),
@@ -136,6 +145,14 @@ class DownloadManager:
         clean = re.sub(r"ERROR:\s*(?:\[.*?\])?", "", raw).strip()
         return clean[:300] or "Bilinmeyen bir indirme hatası oluştu."
 
+    @classmethod
+    def _is_transient_youtube_error(cls, raw: str) -> bool:
+        lowered = raw.lower()
+        return any(
+            keyword in lowered
+            for keyword in cls._TRANSIENT_YOUTUBE_ERROR_KEYWORDS
+        )
+
     def download(self, url: str, fmt: str, resolution: str | None = None):
         if not self.is_valid_url(url):
             if self.on_error:
@@ -203,6 +220,12 @@ class DownloadManager:
             "socket_timeout": 30,
             "retries": 5,
             "fragment_retries": 5,
+            "extractor_retries": 5,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["default", "-android_sdkless"],
+                },
+            },
             "windowsfilenames": True,
         }
         ffmpeg_path = self._find_ffmpeg()
@@ -213,40 +236,64 @@ class DownloadManager:
     def _execute(self, url: str, options: dict, output_ext: str):
         import yt_dlp
 
-        try:
-            if self.on_status:
-                self.on_status("Video bilgileri alınıyor...", "info")
-            started_at = time.time()
-            with yt_dlp.YoutubeDL(options) as ydl:
-                info = ydl.extract_info(url, download=True)
-                if not info:
-                    raise RuntimeError("Video bilgisi alınamadı.")
-                title = info.get("title") or "video"
+        attempts = self._MAX_TRANSIENT_RETRIES + 1
+        for attempt in range(1, attempts + 1):
+            try:
+                if self.on_status:
+                    if attempt == 1:
+                        self.on_status("Video bilgileri alınıyor...", "info")
+                    else:
+                        self.on_status(
+                            "YouTube geçici doğrulama hatası verdi; "
+                            f"yeniden deneniyor ({attempt}/{attempts})...",
+                            "warning",
+                        )
+                started_at = time.time()
+                with yt_dlp.YoutubeDL(options) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    if not info:
+                        raise RuntimeError("Video bilgisi alınamadı.")
+                    title = info.get("title") or "video"
 
-            matches = sorted(
-                self.downloads_dir.rglob(f"*.{output_ext}"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            recent = [
-                path for path in matches
-                if path.stat().st_mtime >= started_at - 2
-            ]
-            filepath = str((recent or matches)[0]) if matches else str(
-                self.downloads_dir / title / f"{title}.{output_ext}"
-            )
-            if self.on_complete:
-                self.on_complete(filepath, title)
-        except yt_dlp.utils.DownloadError as exc:
-            self._emit_error(self._resolve_error(str(exc)))
-        except yt_dlp.utils.PostProcessingError as exc:
-            self._emit_error("ffmpeg işlemi başarısız: " + self._resolve_error(str(exc)))
-        except PermissionError:
-            self._emit_error("İndirme klasörüne yazma izni yok.")
-        except OSError as exc:
-            self._emit_error(self._resolve_error(str(exc)))
-        except Exception as exc:  # Son güvenlik ağı: GUI çökmemeli.
-            self._emit_error(self._resolve_error(str(exc)))
+                matches = sorted(
+                    self.downloads_dir.rglob(f"*.{output_ext}"),
+                    key=lambda p: p.stat().st_mtime,
+                    reverse=True,
+                )
+                recent = [
+                    path for path in matches
+                    if path.stat().st_mtime >= started_at - 2
+                ]
+                filepath = str((recent or matches)[0]) if matches else str(
+                    self.downloads_dir / title / f"{title}.{output_ext}"
+                )
+                if self.on_complete:
+                    self.on_complete(filepath, title)
+                return
+            except yt_dlp.utils.DownloadError as exc:
+                raw_error = str(exc)
+                if (
+                    attempt < attempts
+                    and self._is_transient_youtube_error(raw_error)
+                ):
+                    time.sleep(1)
+                    continue
+                self._emit_error(self._resolve_error(raw_error))
+                return
+            except yt_dlp.utils.PostProcessingError as exc:
+                self._emit_error(
+                    "ffmpeg işlemi başarısız: " + self._resolve_error(str(exc))
+                )
+                return
+            except PermissionError:
+                self._emit_error("İndirme klasörüne yazma izni yok.")
+                return
+            except OSError as exc:
+                self._emit_error(self._resolve_error(str(exc)))
+                return
+            except Exception as exc:  # Son güvenlik ağı: GUI çökmemeli.
+                self._emit_error(self._resolve_error(str(exc)))
+                return
 
     def _emit_error(self, message: str):
         if self.on_error:

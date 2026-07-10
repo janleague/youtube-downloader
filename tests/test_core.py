@@ -66,6 +66,11 @@ class LibraryTests(unittest.TestCase):
             options = manager._common_options()
             self.assertTrue(options["writeinfojson"])
             self.assertTrue(options["writethumbnail"])
+            self.assertEqual(options["extractor_retries"], 5)
+            self.assertEqual(
+                options["extractor_args"]["youtube"]["player_client"],
+                ["default", "-android_sdkless"],
+            )
             self.assertIn("%(title)s", Path(options["outtmpl"]).parent.name)
 
     def test_bundled_ffmpeg_is_used_in_frozen_build(self):
@@ -76,6 +81,59 @@ class LibraryTests(unittest.TestCase):
                 manager = DownloadManager(Path(directory) / "Downloads")
                 self.assertEqual(manager._find_ffmpeg(), ffmpeg)
                 self.assertEqual(manager._common_options()["ffmpeg_location"], str(ffmpeg))
+
+    def test_transient_youtube_login_error_is_retried(self):
+        import yt_dlp
+
+        calls = []
+        completions = []
+        errors = []
+        statuses = []
+
+        class FlakyYoutubeDL:
+            def __init__(self, options):
+                self.options = options
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, _exc_type, _exc, _traceback):
+                return False
+
+            def extract_info(self, _url, download=True):
+                calls.append(self.options)
+                if len(calls) == 1:
+                    raise yt_dlp.utils.DownloadError(
+                        "ERROR: [youtube] abc: Sign in to confirm you're not a bot"
+                    )
+                folder = Path(self.options["outtmpl"]).parent
+                folder.mkdir(parents=True, exist_ok=True)
+                (folder / "Recovered title.mp3").write_bytes(b"audio")
+                return {"title": "Recovered title"}
+
+        with tempfile.TemporaryDirectory() as directory:
+            manager = DownloadManager(
+                Path(directory),
+                on_status=lambda message, level: statuses.append((message, level)),
+                on_complete=lambda filepath, title: completions.append((filepath, title)),
+                on_error=errors.append,
+            )
+            with (
+                patch("time.sleep", return_value=None),
+                patch("yt_dlp.YoutubeDL", FlakyYoutubeDL),
+            ):
+                manager._execute(
+                    "https://www.youtube.com/watch?v=abc",
+                    manager._common_options(),
+                    "mp3",
+                )
+
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(errors, [])
+        self.assertEqual(completions[0][1], "Recovered title")
+        self.assertTrue(
+            any("yeniden deneniyor" in message for message, _level in statuses)
+        )
 
 
 if __name__ == "__main__":
