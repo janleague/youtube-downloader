@@ -79,16 +79,17 @@ export const GithubIcon = (p: P) => (
   </svg>
 );
 
-/** Marka logosu — jenerik kırmızı "play" rozeti (orijinal YouTube logosu DEĞİL). */
+/** Shared YouTube mark used by the app chrome and installer artwork. */
 export const BrandMark = ({ size = 26, radius = 8 }: { size?: number; radius?: number }) => (
-  <div
-    className="flex items-center justify-center"
-    style={{
-      width: size, height: size, borderRadius: radius,
-      background: "linear-gradient(150deg,#ff3a47,#e0001a)",
-      boxShadow: "0 4px 14px -3px rgba(255,40,60,.6), inset 0 1px 0 rgba(255,255,255,.25)",
-    }}
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    role="img"
+    aria-label="YouTube"
+    style={{ display: "block", filter: "drop-shadow(0 3px 7px rgba(255,0,0,.28))" }}
   >
-    <PlayIcon size={size * 0.42} color="#fff" />
-  </div>
+    <rect x="1" y="4.5" width="22" height="15" rx={Math.min((radius / size) * 15, 4.4)} fill="#ff0000" />
+    <path d="m10 8.35 5.65 3.65L10 15.65V8.35Z" fill="#fff" />
+  </svg>
 );

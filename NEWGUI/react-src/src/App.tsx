@@ -9,6 +9,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { AboutPage } from "./pages/AboutPage";
 import { AppProvider } from "./lib/AppContext";
 import { DownloadProvider } from "./lib/useDownload";
+import { UpdateBanner } from "./components/UpdateBanner";
 
 function PageView({ page }: { page: Page }) {
   if (page === "library") return <LibraryPage />;
@@ -49,6 +50,7 @@ function Shell() {
         className="app-shell flex h-full w-full flex-col overflow-hidden bg-ink-850"
       >
         <TitleBar />
+        <UpdateBanner />
         <div className="flex min-h-0 flex-1">
           <Sidebar page={page} onNavigate={navigate} />
           <main className="app-content relative flex min-w-0 flex-1 flex-col bg-ink-900">

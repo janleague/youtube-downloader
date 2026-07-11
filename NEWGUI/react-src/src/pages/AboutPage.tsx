@@ -3,6 +3,7 @@ import { BrandMark, GithubIcon } from "../components/icons";
 import { openUrl } from "../lib/tauri";
 import { buttonMotion } from "../lib/motion";
 import { useApp } from "../lib/AppContext";
+import { APP_VERSION } from "../lib/appInfo";
 
 export function AboutPage() {
   const { ffmpegOk, tr } = useApp();
@@ -29,7 +30,7 @@ export function AboutPage() {
             {tr("appName")}
           </div>
           <div className="mt-[2px] text-[13px] font-medium text-[#86868e]">
-            {tr("version")}
+            {tr("version")} {APP_VERSION}
           </div>
           <div
             className={`mt-[11px] inline-flex items-center gap-[7px] rounded-[8px] border px-[11px] py-[5px] ${

@@ -4,6 +4,7 @@ import {
   SettingsIcon,
   InfoIcon,
   GithubIcon,
+  BrandMark,
 } from "./icons";
 import { openUrl } from "../lib/tauri";
 import { useApp } from "../lib/AppContext";
@@ -77,6 +78,12 @@ export function Sidebar({
 
       <div className="flex-1" />
       <div className="rounded-[14px] border border-white/[0.06] bg-white/[0.018] p-[13px]">
+        <div className="mb-[12px] flex items-center gap-[9px]">
+          <BrandMark size={24} radius={7} />
+          <span className="font-sora text-[12.5px] font-bold text-[#e7e7ea]">
+            {tr("appName")}
+          </span>
+        </div>
         <div className="mb-[11px] flex items-center gap-[9px]">
           <span
             className={`h-[7px] w-[7px] rounded-full ${ffmpegOk ? "bg-ok" : "bg-red-500"}`}

@@ -1,0 +1,72 @@
+name: Release desktop app
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: NEWGUI/react-src/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ../../requirements.txt pyinstaller
+          npm ci
+        working-directory: NEWGUI/react-src
+      - name: Build signed updater package
+        run: npm run release:build
+        working-directory: NEWGUI/react-src
+      - name: Prepare GitHub Release assets
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $bundle = "NEWGUI/react-src/src-tauri/target/release/bundle/nsis"
+          $release = "release-assets"
+          New-Item -ItemType Directory -Force -Path $release | Out-Null
+          $installer = Get-ChildItem $bundle -Filter "*$version*_x64-setup.exe" | Select-Object -First 1
+          $signatureFile = Get-ChildItem $bundle -Filter "*$version*_x64-setup.exe.sig" | Select-Object -First 1
+          Copy-Item $installer "$release/YouTubeDownloader-Setup-v$version.exe"
+          Copy-Item $signatureFile "$release/YouTubeDownloader-Setup-v$version.exe.sig"
+          $signature = (Get-Content -Raw "$release/YouTubeDownloader-Setup-v$version.exe.sig").Trim()
+          $latest = @{
+            version = $version
+            notes = "Signed automatic update for YouTube Indirici $version"
+            pub_date = (Get-Date).ToUniversalTime().ToString("o")
+            platforms = @{
+              "windows-x86_64" = @{
+                url = "https://github.com/janleague/youtube-downloader/releases/download/${{ github.ref_name }}/YouTubeDownloader-Setup-v$version.exe"
+                signature = $signature
+              }
+            }
+          } | ConvertTo-Json -Depth 6
+          Set-Content -Path "$release/latest.json" -Value $latest -Encoding utf8
+      - name: Publish GitHub Release
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if (gh release view $tag *> $null) {
+            gh release upload $tag release-assets/* --clobber
+          } else {
+            gh release create $tag release-assets/* --title "YouTube Indirici $tag" --generate-notes
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}

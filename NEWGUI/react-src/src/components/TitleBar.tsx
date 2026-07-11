@@ -5,6 +5,7 @@ import {
   windowToggleMaximize,
 } from "../lib/tauri";
 import { useApp } from "../lib/AppContext";
+import { APP_VERSION } from "../lib/appInfo";
 
 function WinButton({
   children,
@@ -62,7 +63,7 @@ export function TitleBar() {
         {tr("appName")}
       </span>
       <span className="rounded-[6px] border border-white/[0.06] bg-white/[0.04] px-[7px] py-[2px] text-[10.5px] font-semibold text-[#6a6a72]">
-        v2.2.4
+        v{APP_VERSION}
       </span>
       <div className="flex-1" data-tauri-drag-region />
       <WinButton onClick={() => void windowMinimize()}>

@@ -910,6 +910,8 @@ mod tests {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(DownloadProcess(Mutex::new(None)))
         .on_window_event(|window, event| {
             // Köşe yuvarlama artık CSS ile yapılıyor; pencere büyütüldüğünde

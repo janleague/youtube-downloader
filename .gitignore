@@ -23,3 +23,6 @@ NEWGUI/react-src/src-tauri/binaries/backend/
 .vscode/
 Thumbs.db
 desktop.ini
+.tauri/
+*.key
+*.key.pub
