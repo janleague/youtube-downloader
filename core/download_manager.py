@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-import re
 import os
+import re
 import shutil
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
+from typing import ClassVar
+
+from .engine_updater import EngineUpdater
 
 
 ProgressCallback = Callable[[float, str, str], None]
@@ -18,7 +21,7 @@ ErrorCallback = Callable[[str], None]
 
 
 class DownloadManager:
-    RESOLUTIONS = [
+    RESOLUTIONS: ClassVar[list[str]] = [
         "2160p", "1440p", "1080p", "720p", "480p", "360p", "En İyi",
     ]
     _MAX_TRANSIENT_RETRIES = 2
@@ -32,9 +35,13 @@ class DownloadManager:
         "precondition check failed",
         "unable to download api page",
         "unable to download video data",
+        "requested format is not available",
+        "no video formats found",
+        "only images are available",
+        "no supported javascript runtime",
     )
 
-    _ERROR_MAP = [
+    _ERROR_MAP: ClassVar[list[tuple[str, str]]] = [
         ("Private video", "Bu video özel. Erişim izniniz yok."),
         ("Video unavailable", "Video mevcut değil veya kaldırılmış."),
         ("This video is not available", "Video bölgenizde kullanılamıyor."),
@@ -49,7 +56,10 @@ class DownloadManager:
         ("ffmpeg", "ffmpeg bulunamadı veya çalıştırılamadı."),
         ("No space left", "Disk alanı yetersiz."),
         ("Permission denied", "İndirme klasörüne yazma izni yok."),
-        ("No supported JavaScript runtime", "YouTube format imzası çözülemedi. Node.js kurulu olduğundan emin olun."),
+        (
+            "No supported JavaScript runtime",
+            "YouTube uyumluluk bileşeni başlatılamadı.",
+        ),
         ("Unable to download webpage", "YouTube'a bağlanılamadı."),
         ("Failed to establish a new connection", "İnternet bağlantısı kurulamadı."),
         ("HTTP Error 429", "Çok fazla istek gönderildi. Birkaç dakika bekleyin."),
@@ -68,6 +78,7 @@ class DownloadManager:
         on_status: StatusCallback | None = None,
         on_complete: CompleteCallback | None = None,
         on_error: ErrorCallback | None = None,
+        engine_updater: EngineUpdater | None = None,
     ):
         self.downloads_dir = Path(downloads_dir)
         self.audio_quality = str(audio_quality)
@@ -75,6 +86,9 @@ class DownloadManager:
         self.on_status = on_status
         self.on_complete = on_complete
         self.on_error = on_error
+        self.engine_updater = engine_updater or EngineUpdater(
+            on_status=on_status,
+        )
         self.set_downloads_dir(self.downloads_dir)
 
     def set_downloads_dir(self, path: Path):
@@ -100,10 +114,15 @@ class DownloadManager:
 
     @staticmethod
     def _find_js_runtime() -> tuple[str, Path] | None:
+        bundled_root = getattr(sys, "_MEIPASS", None)
+        if bundled_root:
+            bundled_deno = Path(bundled_root) / "deno.exe"
+            if bundled_deno.is_file():
+                return "deno", bundled_deno
+
         candidates = [
-            ("node", "node"),
             ("deno", "deno"),
-            ("bun", "bun"),
+            ("node", "node"),
             ("quickjs", "qjs"),
         ]
         for runtime, executable in candidates:
@@ -121,9 +140,8 @@ class DownloadManager:
             for root in filter(None, roots):
                 root_path = Path(root)
                 extra_candidates.extend([
-                    ("node", root_path / "nodejs" / "node.exe"),
                     ("deno", root_path / "deno" / "bin" / "deno.exe"),
-                    ("bun", root_path / "bun" / "bin" / "bun.exe"),
+                    ("node", root_path / "nodejs" / "node.exe"),
                 ])
             for runtime, executable in extra_candidates:
                 if executable.is_file():
@@ -258,12 +276,8 @@ class DownloadManager:
             "retries": 5,
             "fragment_retries": 5,
             "extractor_retries": 5,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["default", "-android_sdkless"],
-                },
-            },
             "windowsfilenames": True,
+            "cachedir": str(self.engine_updater.cache_dir),
         }
         ffmpeg_path = self._find_ffmpeg()
         if ffmpeg_path:
@@ -275,9 +289,20 @@ class DownloadManager:
         return options
 
     def _execute(self, url: str, options: dict, output_ext: str):
-        import yt_dlp
+        try:
+            yt_dlp = self.engine_updater.load()
+        except Exception:
+            import yt_dlp
+
+        managed_runtime = self.engine_updater.ensure_js_runtime()
+        if managed_runtime:
+            runtime, executable = managed_runtime
+            options["js_runtimes"] = {
+                runtime: {"path": str(executable)},
+            }
 
         attempts = self._MAX_TRANSIENT_RETRIES + 1
+        engine_refresh_attempted = False
         for attempt in range(1, attempts + 1):
             try:
                 if self.on_status:
@@ -317,6 +342,22 @@ class DownloadManager:
                     attempt < attempts
                     and self._is_transient_youtube_error(raw_error)
                 ):
+                    if not engine_refresh_attempted:
+                        engine_refresh_attempted = True
+                        try:
+                            yt_dlp = self.engine_updater.load(
+                                force_update=True
+                            )
+                            managed_runtime = (
+                                self.engine_updater.ensure_js_runtime()
+                            )
+                            if managed_runtime:
+                                runtime, executable = managed_runtime
+                                options["js_runtimes"] = {
+                                    runtime: {"path": str(executable)},
+                                }
+                        except Exception:
+                            pass
                     time.sleep(1)
                     continue
                 self._emit_error(self._resolve_error(raw_error))

@@ -47,7 +47,7 @@ export function UpdateBanner() {
         if (event.event === "Progress") {
           setDownloaded((value) => value + (event.data.chunkLength ?? 0));
         }
-      }, { timeout: 120_000 });
+      }, { timeout: 600_000 });
       await relaunch();
     } catch {
       setInstalling(false);

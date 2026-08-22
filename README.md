@@ -8,6 +8,8 @@ Tauri + React arayüzlü, `yt-dlp` tabanlı Windows video ve ses indirici.
 - MP4: 360p ile 2160p arası kalite seçimi
 - Canlı ilerleme, hız ve kalan süre
 - Gerçek indirme kütüphanesi, küçük resimler ve dosya açma
+- Hash doğrulamalı, uygulamadan bağımsız yt-dlp nightly güncellemeleri
+- Paketli ve kendini güncelleyen Deno ile güncel YouTube imza desteği
 - Kalıcı klasör, format, kalite, dil, bildirim ve tema ayarları
 - Türkçe ve İngilizce arayüz
 - Tauri masaüstü bildirimleri

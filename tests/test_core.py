@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import tempfile
 import unittest
+import zipfile
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
 from core.download_manager import DownloadManager
+from core.engine_updater import EngineUpdater
 from core.library_service import scan_library
 from core.settings_store import SettingsStore
 
@@ -67,10 +71,8 @@ class LibraryTests(unittest.TestCase):
             self.assertTrue(options["writeinfojson"])
             self.assertTrue(options["writethumbnail"])
             self.assertEqual(options["extractor_retries"], 5)
-            self.assertEqual(
-                options["extractor_args"]["youtube"]["player_client"],
-                ["default", "-android_sdkless"],
-            )
+            self.assertNotIn("extractor_args", options)
+            self.assertTrue(options["cachedir"].endswith("engine\\cache"))
             self.assertIn("%(title)s", Path(options["outtmpl"]).parent.name)
 
     def test_download_options_use_available_js_runtime_for_youtube(self):
@@ -103,6 +105,19 @@ class LibraryTests(unittest.TestCase):
         errors = []
         statuses = []
 
+        class StaticEngineUpdater:
+            def __init__(self, cache_dir):
+                self.cache_dir = cache_dir
+                self.load_calls = []
+
+            def load(self, force_update=False):
+                self.load_calls.append(force_update)
+                return yt_dlp
+
+            @staticmethod
+            def ensure_js_runtime():
+                return None
+
         class FlakyYoutubeDL:
             def __init__(self, options):
                 self.options = options
@@ -125,11 +140,13 @@ class LibraryTests(unittest.TestCase):
                 return {"title": "Recovered title"}
 
         with tempfile.TemporaryDirectory() as directory:
+            updater = StaticEngineUpdater(Path(directory) / "engine-cache")
             manager = DownloadManager(
                 Path(directory),
                 on_status=lambda message, level: statuses.append((message, level)),
                 on_complete=lambda filepath, title: completions.append((filepath, title)),
                 on_error=errors.append,
+                engine_updater=updater,
             )
             with (
                 patch("time.sleep", return_value=None),
@@ -142,11 +159,155 @@ class LibraryTests(unittest.TestCase):
                 )
 
         self.assertEqual(len(calls), 2)
+        self.assertEqual(updater.load_calls, [False, True])
         self.assertEqual(errors, [])
         self.assertEqual(completions[0][1], "Recovered title")
         self.assertTrue(
             any("yeniden deneniyor" in message for message, _level in statuses)
         )
+
+
+class EngineUpdaterTests(unittest.TestCase):
+    @staticmethod
+    def _fake_engine_bytes(version: str = "2099.01.01") -> bytes:
+        output = BytesIO()
+        with zipfile.ZipFile(output, "w") as archive:
+            archive.writestr("yt_dlp/__init__.py", "")
+            archive.writestr(
+                "yt_dlp/version.py",
+                f"__version__ = '{version}'\n",
+            )
+        output.seek(0)
+        return output.read()
+
+    @classmethod
+    def _write_fake_engine(cls, folder: Path) -> tuple[Path, str]:
+        engine = folder / "yt-dlp"
+        engine.write_bytes(cls._fake_engine_bytes())
+        digest = hashlib.sha256(engine.read_bytes()).hexdigest()
+        (folder / "yt-dlp.sha256").write_text(digest, encoding="ascii")
+        return engine, digest
+
+    def test_verified_bundled_engine_is_copied_to_private_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "bundle"
+            bundle.mkdir()
+            _source, digest = self._write_fake_engine(bundle)
+            updater = EngineUpdater(
+                data_root=root / "data",
+                bundled_root=bundle,
+                clock=lambda: 0,
+            )
+
+            engine = updater.ensure_engine()
+
+            self.assertIsNotNone(engine)
+            self.assertEqual(hashlib.sha256(engine.read_bytes()).hexdigest(), digest)
+            self.assertEqual(updater._state["engine_version"], "2099.01.01")
+
+    def test_tampered_bundled_engine_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "bundle"
+            bundle.mkdir()
+            self._write_fake_engine(bundle)
+            (bundle / "yt-dlp").write_bytes(b"tampered")
+            updater = EngineUpdater(
+                data_root=root / "data",
+                bundled_root=bundle,
+                clock=lambda: 0,
+            )
+            with patch.object(updater, "_download", side_effect=OSError("offline")):
+                engine = updater.ensure_engine()
+
+            self.assertIsNone(engine)
+
+    def test_bundled_deno_is_copied_without_system_install(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "bundle"
+            bundle.mkdir()
+            deno = bundle / "deno.exe"
+            deno.write_bytes(b"deno-binary")
+            digest = hashlib.sha256(deno.read_bytes()).hexdigest()
+            (bundle / "deno.exe.sha256").write_text(digest, encoding="ascii")
+            updater = EngineUpdater(
+                data_root=root / "data",
+                bundled_root=bundle,
+                clock=lambda: 0,
+            )
+
+            with patch.object(
+                updater,
+                "_deno_works",
+                side_effect=lambda path: path.is_file(),
+            ):
+                runtime = updater.ensure_js_runtime()
+
+            self.assertEqual(runtime, ("deno", updater.deno_path))
+            self.assertEqual(updater.deno_path.read_bytes(), b"deno-binary")
+
+    def test_verified_remote_update_keeps_previous_engine_for_rollback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "bundle"
+            bundle.mkdir()
+            _source, old_digest = self._write_fake_engine(bundle)
+            updater = EngineUpdater(
+                data_root=root / "data",
+                bundled_root=bundle,
+                clock=lambda: 0,
+            )
+            old_engine = updater.ensure_engine()
+            new_data = self._fake_engine_bytes("2099.02.02")
+            new_digest = hashlib.sha256(new_data).hexdigest()
+
+            def fake_download(url, _maximum_size):
+                if url == updater.CHECKSUMS_URL:
+                    return f"{new_digest}  yt-dlp\n".encode()
+                return new_data
+
+            with patch.object(updater, "_download", side_effect=fake_download):
+                new_engine = updater.ensure_engine(force_update=True)
+
+            self.assertNotEqual(new_engine, old_engine)
+            self.assertEqual(updater._state["engine_version"], "2099.02.02")
+            self.assertEqual(
+                updater._state["previous_engine_file"], old_engine.name
+            )
+            self.assertEqual(
+                hashlib.sha256(old_engine.read_bytes()).hexdigest(),
+                old_digest,
+            )
+
+    def test_bad_remote_update_keeps_current_verified_engine(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "bundle"
+            bundle.mkdir()
+            self._write_fake_engine(bundle)
+            updater = EngineUpdater(
+                data_root=root / "data",
+                bundled_root=bundle,
+                clock=lambda: 0,
+            )
+            current = updater.ensure_engine()
+            claimed_digest = "a" * 64
+
+            def fake_download(url, _maximum_size):
+                if url == updater.CHECKSUMS_URL:
+                    return f"{claimed_digest}  yt-dlp\n".encode()
+                return b"tampered"
+
+            with patch.object(updater, "_download", side_effect=fake_download):
+                after_update = updater.ensure_engine(force_update=True)
+
+            self.assertEqual(after_update, current)
+            self.assertIn(
+                "doğrulaması başarısız",
+                updater._state["last_engine_error"],
+            )
 
 
 if __name__ == "__main__":
