@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import os
 import shutil
 import sys
 import time
@@ -24,10 +25,13 @@ class DownloadManager:
     _TRANSIENT_YOUTUBE_ERROR_KEYWORDS = (
         "sign in to confirm",
         "confirm you're not a bot",
+        "confirm you’re not a bot",
         "confirm you are not a bot",
+        "not a bot",
         "http error 403",
         "precondition check failed",
         "unable to download api page",
+        "unable to download video data",
     )
 
     _ERROR_MAP = [
@@ -45,6 +49,7 @@ class DownloadManager:
         ("ffmpeg", "ffmpeg bulunamadı veya çalıştırılamadı."),
         ("No space left", "Disk alanı yetersiz."),
         ("Permission denied", "İndirme klasörüne yazma izni yok."),
+        ("No supported JavaScript runtime", "YouTube format imzası çözülemedi. Node.js kurulu olduğundan emin olun."),
         ("Unable to download webpage", "YouTube'a bağlanılamadı."),
         ("Failed to establish a new connection", "İnternet bağlantısı kurulamadı."),
         ("HTTP Error 429", "Çok fazla istek gönderildi. Birkaç dakika bekleyin."),
@@ -92,6 +97,38 @@ class DownloadManager:
 
         system_ffmpeg = shutil.which("ffmpeg")
         return Path(system_ffmpeg) if system_ffmpeg else None
+
+    @staticmethod
+    def _find_js_runtime() -> tuple[str, Path] | None:
+        candidates = [
+            ("node", "node"),
+            ("deno", "deno"),
+            ("bun", "bun"),
+            ("quickjs", "qjs"),
+        ]
+        for runtime, executable in candidates:
+            found = shutil.which(executable)
+            if found:
+                return runtime, Path(found)
+
+        if sys.platform.startswith("win"):
+            roots = [
+                os.environ.get("ProgramFiles"),
+                os.environ.get("ProgramFiles(x86)"),
+                os.environ.get("LOCALAPPDATA"),
+            ]
+            extra_candidates = []
+            for root in filter(None, roots):
+                root_path = Path(root)
+                extra_candidates.extend([
+                    ("node", root_path / "nodejs" / "node.exe"),
+                    ("deno", root_path / "deno" / "bin" / "deno.exe"),
+                    ("bun", root_path / "bun" / "bin" / "bun.exe"),
+                ])
+            for runtime, executable in extra_candidates:
+                if executable.is_file():
+                    return runtime, executable
+        return None
 
     @classmethod
     def check_ffmpeg(cls) -> bool:
@@ -231,6 +268,10 @@ class DownloadManager:
         ffmpeg_path = self._find_ffmpeg()
         if ffmpeg_path:
             options["ffmpeg_location"] = str(ffmpeg_path)
+        js_runtime = self._find_js_runtime()
+        if js_runtime:
+            runtime, executable = js_runtime
+            options["js_runtimes"] = {runtime: {"path": str(executable)}}
         return options
 
     def _execute(self, url: str, options: dict, output_ext: str):

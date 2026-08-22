@@ -73,6 +73,19 @@ class LibraryTests(unittest.TestCase):
             )
             self.assertIn("%(title)s", Path(options["outtmpl"]).parent.name)
 
+    def test_download_options_use_available_js_runtime_for_youtube(self):
+        node_path = r"C:\Program Files\nodejs\node.exe"
+
+        def fake_which(executable):
+            return node_path if executable == "node" else None
+
+        with tempfile.TemporaryDirectory() as directory:
+            manager = DownloadManager(Path(directory))
+            with patch("shutil.which", side_effect=fake_which):
+                options = manager._common_options()
+
+        self.assertEqual(options["js_runtimes"], {"node": {"path": node_path}})
+
     def test_bundled_ffmpeg_is_used_in_frozen_build(self):
         with tempfile.TemporaryDirectory() as directory:
             ffmpeg = Path(directory) / "ffmpeg.exe"
